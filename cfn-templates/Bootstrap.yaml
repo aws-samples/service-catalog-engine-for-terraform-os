@@ -1,0 +1,40 @@
+Resources:
+
+  # Bucket used for code assets and other objects required to bootstrap the main Sam template
+  TerraformBootstrapBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'terraform-engine-bootstrap-${AWS::AccountId}-${AWS::Region}'
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  TerraformBootstrapBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref TerraformBootstrapBucket
+      PolicyDocument:
+        Statement:
+          - Action: s3:*
+            Effect: Deny
+            Principal: "*"
+            Resource:
+              - !Sub ${TerraformBootstrapBucket.Arn}/*
+              - !Sub ${TerraformBootstrapBucket.Arn}
+            Condition:
+              Bool: {"aws:SecureTransport": false}
+
+Outputs:
+  BootstrapBucketArn:
+    Description: Arn of the bootstrap bucket
+    Value: !GetAtt TerraformBootstrapBucket.Arn
+    Export:
+      Name: TerraformEngineBootstrapBucketArn
+  BootstrapBucketName:
+    Description: Name of the bootstrap bucket
+    Value: !Ref TerraformBootstrapBucket
+    Export:
+      Name: TerraformEngineBootstrapBucketName

@@ -1,0 +1,72 @@
+Description: Resources set up in the accounts where Terraform provisioning will occur.
+Parameters:
+  TerraformEngineAccount:
+    Type: String
+    AllowedPattern: "^[0-9]{12}$"
+    Description: The account where the Terraform engine has been deployed.
+Resources:
+
+  # Example launch role with permissions to manage resources defined in a Terraform product.
+  # See https://docs.aws.amazon.com/servicecatalog/latest/adminguide/constraints-launch.html
+  # But for a Terraform product, we don't need to add CloudFormation permissions.
+  SCLaunchRoleTerraformExample:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SCLaunchRoleTerraformExample
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: GivePermissionsToServiceCatalog
+            Effect: Allow
+            Principal:
+              Service: servicecatalog.amazonaws.com
+            Action: sts:AssumeRole
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              AWS:
+                - !Sub arn:${AWS::Partition}:iam::${TerraformEngineAccount}:root
+            Condition:
+              StringLike:
+                "aws:PrincipalArn":
+                  - !Sub arn:${AWS::Partition}:iam::${TerraformEngineAccount}:role/TerraformEngine/TerraformExecutionRole*
+                  - !Sub arn:${AWS::Partition}:iam::${TerraformEngineAccount}:role/TerraformEngine/ServiceCatalogTerraformOSParameterParserRole*
+      Policies:
+        - PolicyName: ProvisioningArtifactAccessPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    "s3:ExistingObjectTag/servicecatalog:provisioning": "true"
+        # This policy grants permissions required to manage resources in the SC product. 
+        # This example is for provisioning an S3 bucket.
+        - PolicyName: ResourceCreationPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - s3:CreateBucket*
+                  - s3:DeleteBucket*
+                  - s3:Get*
+                  - s3:List*
+                  - s3:PutBucketTagging
+                Resource: "arn:aws:s3:::*"
+              # Resource group and tagging permissions required for Service Catalog terraform open source products
+              - Effect: Allow
+                Action:
+                  - resource-groups:CreateGroup
+                  - resource-groups:DeleteGroup
+                  - resource-groups:Tag
+                  - resource-groups:ListGroupResources
+                Resource: "*"
+              - Effect: Allow
+                Action: 
+                  - tag:GetResources
+                  - tag:GetTagKeys
+                  - tag:GetTagValues
+                  - tag:TagResources
+                  - tag:UntagResources
+                Resource: "*"

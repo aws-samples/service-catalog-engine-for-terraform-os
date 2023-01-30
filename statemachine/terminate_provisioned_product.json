@@ -1,0 +1,362 @@
+{
+    "Comment": "A state machine that terminates a provisioned product",
+    "StartAt": "Select worker host",
+    "States": {
+        "Select worker host": {
+            "Type": "Task",
+            "Comment": "Finds a usable EC2 instance from Auto-scaling group to perform the Terraform workload",
+            "Resource": "${LambdaInvokeArn}",
+            "Parameters": {
+                "FunctionName": "${SelectWorkerHostFunctionArn}",
+                "Payload": {
+                    "awsAccountId.$": "$.identity.awsAccountId",
+                    "provisionedProductId.$": "$.provisionedProductId",
+                    "provisionedProductName.$": "$.provisionedProductName",
+                    "recordId.$": "$.recordId"
+                },
+                "InvocationType": "RequestResponse"
+            },
+            "ResultSelector": {
+                "instanceId.$": "$.Payload.instanceId",
+                "lambdaExecutionRequestId.$": "$.SdkHttpMetadata.HttpHeaders.x-amzn-RequestId",
+                "xRayTraceId.$": "$.SdkHttpMetadata.HttpHeaders.X-Amzn-Trace-Id",
+                "httpStatusCode.$": "$.SdkHttpMetadata.HttpStatusCode"
+            },
+            "ResultPath": "$.selectWorkerHostResponse",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 6,
+                    "BackoffRate": 2
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [ "States.TaskFailed" ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Notify terminate failure result"
+                },
+                {
+                    "ErrorEquals": [ "States.Timeout" ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Notify terminate failure result"
+                }
+            ],
+            "TimeoutSeconds": 60,
+            "Next": "Send destroy command"
+        },
+        "Send destroy command": {
+            "Type": "Task",
+            "Comment": "Invoke SSM SendCommand API to perform Terraform destroy workload on an EC2 instance",
+            "Resource": "${LambdaInvokeArn}",
+            "Parameters": {
+                "FunctionName": "${SendDestroyCommandFunctionArn}",
+                "Payload": {
+                    "awsAccountId.$": "$.identity.awsAccountId",
+                    "operation.$": "$.operation",
+                    "provisionedProductId.$": "$.provisionedProductId",
+                    "provisionedProductName.$": "$.provisionedProductName",
+                    "recordId.$": "$.recordId",
+                    "launchRoleArn.$": "$.launchRoleArn",
+                    "instanceId.$": "$.selectWorkerHostResponse.instanceId"
+                },
+                "InvocationType": "RequestResponse"
+            },
+            "ResultSelector": {
+                "commandId.$": "$.Payload.commandId",
+                "lambdaExecutionRequestId.$": "$.SdkHttpMetadata.HttpHeaders.x-amzn-RequestId",
+                "xRayTraceId.$": "$.SdkHttpMetadata.HttpHeaders.X-Amzn-Trace-Id",
+                "httpStatusCode.$": "$.SdkHttpMetadata.HttpStatusCode"
+            },
+            "ResultPath": "$.sendDestroyCommandResponse",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 6,
+                    "BackoffRate": 2
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [ "States.TaskFailed" ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Notify terminate failure result"
+                },
+                {
+                    "ErrorEquals": [ "States.Timeout" ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Notify terminate failure result"
+                }
+            ],
+            "TimeoutSeconds": 60,
+            "Next": "Wait for command to complete"
+        },
+        "Wait for command to complete": {
+            "Type": "Wait",
+            "Seconds": 10,
+            "Next": "Poll command invocation"
+        },
+        "Poll command invocation": {
+            "Type": "Task",
+            "Comment": "Invoke SSM GetCommandInvocation API to get the Terraform workload status running on an EC2 instance",
+            "Resource": "${LambdaInvokeArn}",
+            "Parameters": {
+                "FunctionName": "${PollCommandInvocationFunctionArn}",
+                "Payload": {
+                    "awsAccountId.$": "$.identity.awsAccountId",
+                    "provisionedProductId.$": "$.provisionedProductId",
+                    "provisionedProductName.$": "$.provisionedProductName",
+                    "recordId.$": "$.recordId",
+                    "instanceId.$": "$.selectWorkerHostResponse.instanceId",
+                    "commandId.$": "$.sendDestroyCommandResponse.commandId"
+                },
+                "InvocationType": "RequestResponse"
+            },
+            "ResultSelector": {
+                "invocationStatus.$": "$.Payload.invocationStatus",
+                "errorMessage.$": "$.Payload.errorMessage",
+                "lambdaExecutionRequestId.$": "$.SdkHttpMetadata.HttpHeaders.x-amzn-RequestId",
+                "xRayTraceId.$": "$.SdkHttpMetadata.HttpHeaders.X-Amzn-Trace-Id",
+                "httpStatusCode.$": "$.SdkHttpMetadata.HttpStatusCode"
+            },
+            "ResultPath": "$.pollCommandInvocationResponse",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 6,
+                    "BackoffRate": 2
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [ "States.TaskFailed" ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Notify terminate failure result"
+                },
+                {
+                    "ErrorEquals": [ "States.Timeout" ],
+                    "ResultPath": "$.errorInfo",
+                    "Next": "Notify terminate failure result"
+                }
+            ],
+            "TimeoutSeconds": 60,
+            "Next": "Is Command Completed Successfully?"
+        },
+        "Is Command Completed Successfully?": {
+            "Type": "Choice",
+            "Comment": "Looks-up the current status of the command invocation and delegates accordingly to handle it",
+            "Choices": [
+                {
+                    "And": [
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "IsPresent": true
+                        },
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "IsString": true
+                        },
+                        {
+                            "Or": [
+                                {
+                                    "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                                    "StringEquals": "Pending"
+                                },
+                                {
+                                    "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                                    "StringEquals": "InProgress"
+                                },
+                                {
+                                    "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                                    "StringEquals": "Delayed"
+                                },
+                                {
+                                    "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                                    "StringEquals": "Cancelling"
+                                }
+                            ]
+                        }
+                    ],
+                    "Next": "Wait for command to complete"
+                },
+                {
+                    "And": [
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "IsPresent": true
+                        },
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "IsString": true
+                        },
+                        {
+                            "Or": [
+                                {
+                                    "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                                    "StringEquals": "Failed"
+                                },
+                                {
+                                    "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                                    "StringEquals": "TimedOut"
+                                },
+                                {
+                                    "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                                    "StringEquals": "Cancelled"
+                                }
+                            ]
+                        }
+                    ],
+                    "Next": "Convert error structure"
+                },
+                {
+                    "And": [
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "IsPresent": true
+                        },
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "IsString": true
+                        },
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "StringEquals": "Success"
+                        }
+                    ],
+                    "Next": "Notify terminate success result"
+                }
+            ],
+            "Default": "Convert error structure"
+        },
+        "Convert error structure": {
+            "Type": "Pass",
+            "Comment": "Restructures error from Poll command invocation task in a format Notify SC failure task understands",
+            "Parameters": {
+                "Error": "Error running terraform-runner script",
+                "Cause.$": "$.pollCommandInvocationResponse.errorMessage",
+                "isWrapperError": true
+            },
+            "ResultPath": "$.errorInfo",
+            "Next": "Notify terminate failure result"
+        },
+        "Notify terminate success result": {
+            "Type": "Task",
+            "Comment": "Sends back success results of Terraform terminate back to Service Catalog",
+            "Resource": "${LambdaInvokeArn}",
+            "Parameters": {
+                "FunctionName": "${NotifyTerminateResultFunctionArn}",
+                "Payload": {
+                    "token.$": "$.token",
+                    "awsAccountId.$": "$.identity.awsAccountId",
+                    "provisionedProductId.$": "$.provisionedProductId",
+                    "provisionedProductName.$": "$.provisionedProductName",
+                    "recordId.$": "$.recordId"
+                },
+                "InvocationType": "RequestResponse"
+            },
+            "ResultSelector": {
+                "lambdaExecutionRequestId.$": "$.SdkHttpMetadata.HttpHeaders.x-amzn-RequestId",
+                "xRayTraceId.$": "$.SdkHttpMetadata.HttpHeaders.X-Amzn-Trace-Id",
+                "httpStatusCode.$": "$.SdkHttpMetadata.HttpStatusCode"
+            },
+            "ResultPath": "$.notifyTerminateResultResponse",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 6,
+                    "BackoffRate": 2
+                }
+            ],
+            "TimeoutSeconds": 300,
+            "Next": "Succeeded"
+        },
+        "Notify terminate failure result": {
+            "Type": "Task",
+            "Comment": "Sends failure results of Terraform terminate to Service Catalog",
+            "Resource": "${LambdaInvokeArn}",
+            "Parameters": {
+                "FunctionName": "${NotifyTerminateResultFunctionArn}",
+                "Payload": {
+                    "token.$": "$.token",
+                    "awsAccountId.$": "$.identity.awsAccountId",
+                    "provisionedProductId.$": "$.provisionedProductId",
+                    "provisionedProductName.$": "$.provisionedProductName",
+                    "recordId.$": "$.recordId",
+                    "error.$": "$.errorInfo.Error",
+                    "errorMessage.$": "$.errorInfo.Cause"
+                },
+                "InvocationType": "RequestResponse"
+            },
+            "ResultSelector": {
+                "lambdaExecutionRequestId.$": "$.SdkHttpMetadata.HttpHeaders.x-amzn-RequestId",
+                "xRayTraceId.$": "$.SdkHttpMetadata.HttpHeaders.X-Amzn-Trace-Id",
+                "httpStatusCode.$": "$.SdkHttpMetadata.HttpStatusCode"
+            },
+            "ResultPath": "$.notifyTerminateResultResponse",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 6,
+                    "BackoffRate": 2
+                }
+            ],
+            "TimeoutSeconds": 300,
+            "Next": "Is error source Terraform wrapper?"
+        },
+        "Is error source Terraform wrapper?": {
+            "Type": "Choice",
+            "Comment": "Looks up if the error cause based on Terraform wrapper or not and sets the state machine terminal status accordingly",
+            "Choices": [
+                {
+                    "And": [
+                        {
+                            "Variable": "$.errorInfo.isWrapperError",
+                            "IsPresent": true
+                        },
+                        {
+                            "Variable": "$.errorInfo.isWrapperError",
+                            "IsBoolean": true
+                        },
+                        {
+                            "Variable": "$.errorInfo.isWrapperError",
+                            "BooleanEquals": true
+                        }
+                    ],
+                    "Next": "Succeeded"
+                }
+            ],
+            "Default": "Failed"
+        },
+        "Succeeded": {
+            "Type": "Succeed"
+        },
+        "Failed": {
+            "Type": "Fail"
+        }
+    }
+}
