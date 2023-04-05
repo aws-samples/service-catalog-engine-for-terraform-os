@@ -45,6 +45,16 @@ SCRIPT_DIR=./bin/bash
 echo "AWS account: $AWS_ACCOUNT_ID"
 echo "AWS region: $AWS_REGION"
 
+if [ -d "venv" ]
+then
+    echo "Virtual environment directory already exists, Skipping creation of virtual environment"
+else
+    echo "Creating a Python virtual environment"
+    # This assumes that you have python3.9 in your machine
+    python3 -m venv venv
+fi
+. venv/bin/activate
+
 echo "Building the ServiceCatalogTerraformOSParameterParser function"
 cd lambda-functions/terraform_open_source_parameter_parser
 rm -f go.mod
@@ -110,6 +120,7 @@ then
   echo "Deployment succeeded"
 else
   echo "Deployment failed. Check $SAM_DEPLOY_OUTPUT for details."
+  echo "Deactivating python virtual environment"
   exit 1
 fi
 
@@ -121,5 +132,8 @@ then
   export AWS_REGION
   python3 $SCRIPT_DIR/replace-ec2-instances.py
 fi
+
+echo "Deactivating python virtual environment"
+deactivate
 
 echo "Deployment finished successfully for account $AWS_ACCOUNT_ID in $AWS_REGION. The script took $SECONDS seconds."
