@@ -57,6 +57,12 @@ The manual instructions assume you are using the default profile to store your A
 1. Run `go mod tidy` to generate the required `go.mod` and `go.sum` files
 1. Optional step: Run `go test` within the test containing directory to execute all unit tests in Go
 
+### Create a python virtual environment
+1. Create the virtual environment in directory `venv` by running the command `python3 -m venv venv`
+1. Activate the newly created pythong virtual environment `. venv/bin/activate`
+
+Note: Once done running all python commands call `deactivate` to stop using the virtual environment.
+
 ### Build the Lambda functions 
 
 1. Cd to the root directory of the project.
@@ -307,6 +313,7 @@ Unit tests are included for each Lambda function as well as for the terraform_ru
 1. [Terraform](https://github.com/hashicorp/terraform)
 1. [Hashicorp Terraform Config Inspect library](https://github.com/hashicorp/terraform-config-inspect)
 1. [Original 2018 Service Catalog Terraform Reference Architecture](https://github.com/aws-samples/aws-service-catalog-terraform-reference-architecture)
+1. [Python virtual environment](https://docs.python.org/3/library/venv.html)
 
 # Limitations
 
