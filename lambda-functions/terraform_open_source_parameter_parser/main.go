@@ -32,6 +32,6 @@ func HandleRequest(event TerraformOpenSourceParameterParserInput) (TerraformOpen
 		return TerraformOpenSourceParameterParserResponse{}, fileMapErr
 	}
 
-	parameters := ParseParametersFromConfiguration(fileMap)
-	return TerraformOpenSourceParameterParserResponse{Parameters: parameters}, nil
+	parameters, parseParametersErr := ParseParametersFromConfiguration(fileMap)
+	return TerraformOpenSourceParameterParserResponse{Parameters: parameters}, parseParametersErr
 }
