@@ -279,7 +279,7 @@ func TestParseParametersFromConfigurationWithComprehensiveVariableFileHappy(t *t
 func TestParseParametersFromConfigurationWithNoFilesThrowsParserInvalidParameterException(t *testing.T) {
 	// setup
 	fileMap := make(map[string]string)
-	expectedErrorMessage := "No .tf files found. Nothing to parse. Make sure the root directory of the artifact contains the .tf files for the root module."
+	expectedErrorMessage := "No .tf files found. Nothing to parse. Make sure the root directory of the Terraform open source configuration file contains the .tf files for the root module."
 
 	// act
 	_, err := ParseParametersFromConfiguration(fileMap)

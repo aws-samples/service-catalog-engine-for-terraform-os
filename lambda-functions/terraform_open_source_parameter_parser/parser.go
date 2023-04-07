@@ -13,7 +13,7 @@ import (
 const PrimaryModuleName = "PrimaryModule"
 const OverrideModuleName = "OverrideModule"
 const OverrideFileSuffix = "override.tf"
-const NoFilesToParseExceptionMessage = "No .tf files found. Nothing to parse. Make sure the root directory of the artifact contains the .tf files for the root module."
+const NoFilesToParseExceptionMessage = "No .tf files found. Nothing to parse. Make sure the root directory of the Terraform open source configuration file contains the .tf files for the root module."
 
 // ParseParametersFromConfiguration - Takes Terraform configuration represented as a map from file name to string contents
 // parses out the variable blocks and returns slice of Parameter pointers
