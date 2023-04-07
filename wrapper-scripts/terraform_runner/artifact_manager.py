@@ -1,3 +1,4 @@
+from glob import glob
 import tarfile
 
 import boto3
@@ -6,6 +7,8 @@ from botocore.exceptions import ClientError
 # Constants
 ROLE_SESSION_NAME = 'TerraformLaunchRole'
 LOCAL_ARTIFACT_FILE = 'artifact.local'
+REQUIRED_FILES_PATTERN = '*.tf'
+NO_REQUIRED_FILES_FOUND_MESSAGE = 'No .tf files found. Nothing to parse. Make sure the root directory of the Terraform open source configuration file contains the .tf files for the root module.'
 
 # Boto exception keys
 RESPONSE_METADATA_KEY = "ResponseMetadata"
@@ -22,6 +25,10 @@ def __get_s3_client(launch_role_arn):
                         aws_secret_access_key=credentials['SecretAccessKey'],
                         aws_session_token=credentials['SessionToken'])
 
+def __validate_required_files_exist(workspace_dir):
+    files = glob(f'{workspace_dir}/{REQUIRED_FILES_PATTERN}')
+    if not files:
+        raise RuntimeError(NO_REQUIRED_FILES_FOUND_MESSAGE)
 
 def download_artifact(launch_role_arn, artifact_path, workspace_dir):
     # Extract bucket, key, and file name from the path. This will be the S3 URI.
@@ -47,3 +54,5 @@ def download_artifact(launch_role_arn, artifact_path, workspace_dir):
             file_handle.extractall(workspace_dir)
     except Exception as e:
         raise RuntimeError(f'Could not extract files from {artifact_path}: {e}')
+
+    __validate_required_files_exist(workspace_dir)
