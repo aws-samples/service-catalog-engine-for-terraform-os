@@ -51,9 +51,12 @@ func TestParseParametersFromConfigurationHappy(t *testing.T) {
 	expectedResultMap["test_variable_complex_type"] = expectedParameter3
 
 	// act
-	actualResult := ParseParametersFromConfiguration(fileMap)
+	actualResult, err := ParseParametersFromConfiguration(fileMap)
 
 	// assert
+	if err != nil {
+		t.Errorf("Unexpected error returned. %v", err)
+	}
 
 	// assert the number of parameters parsed is as expected
 	if len(actualResult) != len(expectedResultMap) {
@@ -127,9 +130,13 @@ func TestParseParametersFromConfigurationWithOverrideFilesHappy(t *testing.T) {
 	expectedResultMap["new_variable_from_override"] = expectedParameter4
 
 	// act
-	actualResult := ParseParametersFromConfiguration(fileMap)
+	actualResult, err := ParseParametersFromConfiguration(fileMap)
 
 	// assert
+	if err != nil {
+		t.Errorf("Unexpected error returned. %v", err)
+	}
+
 
 	// assert the number of parameters parsed is as expected
 	if len(actualResult) != len(expectedResultMap) {
@@ -237,9 +244,12 @@ func TestParseParametersFromConfigurationWithComprehensiveVariableFileHappy(t *t
 	expectedResultMap["tuple_variable"] = expectedParameter8
 
 	// act
-	actualResult := ParseParametersFromConfiguration(fileMap)
+	actualResult, err := ParseParametersFromConfiguration(fileMap)
 
 	// assert
+	if err != nil {
+		t.Errorf("Unexpected error returned. %v", err)
+	}
 
 	// assert the number of parameters parsed is as expected
 	if len(actualResult) != len(expectedResultMap) {
@@ -263,5 +273,19 @@ func TestParseParametersFromConfigurationWithComprehensiveVariableFileHappy(t *t
 	// assert all parameters were parsed
 	if len(expectedResultMap) != 0 {
 		t.Errorf("Not all expected parameters were parsed")
+	}
+}
+
+func TestParseParametersFromConfigurationWithNoFilesThrowsParserInvalidParameterException(t *testing.T) {
+	// setup
+	fileMap := make(map[string]string)
+	expectedErrorMessage := "No .tf files found. Nothing to parse. Make sure the root directory of the Terraform open source configuration file contains the .tf files for the root module."
+
+	// act
+	_, err := ParseParametersFromConfiguration(fileMap)
+
+	// assert
+	if !reflect.DeepEqual(err, ParserInvalidParameterException{Message: expectedErrorMessage}) {
+		t.Errorf("Validator did not throw ParserInvalidParameterException with expected error message")
 	}
 }

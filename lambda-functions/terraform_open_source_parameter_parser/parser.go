@@ -13,17 +13,24 @@ import (
 const PrimaryModuleName = "PrimaryModule"
 const OverrideModuleName = "OverrideModule"
 const OverrideFileSuffix = "override.tf"
+const NoFilesToParseExceptionMessage = "No .tf files found. Nothing to parse. Make sure the root directory of the Terraform open source configuration file contains the .tf files for the root module."
 
 // ParseParametersFromConfiguration - Takes Terraform configuration represented as a map from file name to string contents
 // parses out the variable blocks and returns slice of Parameter pointers
-func ParseParametersFromConfiguration(fileMap map[string]string) []*Parameter {
+func ParseParametersFromConfiguration(fileMap map[string]string) ([]*Parameter, error) {
+	if len(fileMap) == 0 {
+		return nil, ParserInvalidParameterException{
+			Message: NoFilesToParseExceptionMessage,
+		}
+	}
+
 	primaryFileMap, overrideFileMap := bisectFileMap(fileMap)
 
 	primaryParameterMap := parseParameterMapFromFileMap(primaryFileMap, PrimaryModuleName)
 	overrideParameterMap := parseParameterMapFromFileMap(overrideFileMap, OverrideModuleName)
 	parameters := mergeParameterMaps(primaryParameterMap, overrideParameterMap)
 
-	return parameters
+	return parameters, nil
 }
 
 // bisects the original file map into primaryFileMap and overrideFileMap
