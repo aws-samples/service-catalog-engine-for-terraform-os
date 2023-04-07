@@ -1,3 +1,8 @@
+# AWS Service Catalog Engine for Terraform open source
+
+The AWS Service Catalog Terraform Reference Engine (TRE) provides an example for you to configure and install a Terraform open source engine in your AWS Service Catalog administrator account. With the engine installed into your account, you can use Service Catalog as a single tool to organize, govern, and distribute your Terraform configurations within AWS.
+For more information about Terrform open source and AWS Service Catalog, see [Getting started with Terraform open source.](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html)
+
 # Pre-requisites
 
 The installation can be done from any Linux or Mac machine.
