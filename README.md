@@ -25,7 +25,10 @@ The project includes a set of scripts to automatically install a new environment
     1. Replaces EC2 instances
     1. Resumes SQS message processing.
 
-The automated installation runs as a bash script. If bash is not available in your environment, please follow the instructions below for manual installation.
+The automated installation requires that the following are available on your local machine. If they are not available, please follow the instructions below for manual installation.
+
+1. bash
+1. jq
 
 The instance replacement process can take a long time if you have long-running provisioning operations in flight.
 
