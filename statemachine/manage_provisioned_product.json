@@ -227,16 +227,29 @@
                                 },
                                 {
                                     "Variable": "$.pollCommandInvocationResponse.invocationStatus",
-                                    "StringEquals": "TimedOut"
-                                },
-                                {
-                                    "Variable": "$.pollCommandInvocationResponse.invocationStatus",
                                     "StringEquals": "Cancelled"
                                 }
                             ]
                         }
                     ],
                     "Next": "Convert error structure"
+                },
+                {
+                    "And": [
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "IsPresent": true
+                        },
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "IsString": true
+                        },
+                        {
+                            "Variable": "$.pollCommandInvocationResponse.invocationStatus",
+                            "StringEquals": "TimedOut"
+                        }
+                    ],
+                    "Next": "Convert timed out structure"
                 },
                 {
                     "And": [
@@ -312,6 +325,17 @@
             "Parameters": {
                 "Error": "Error running terraform-runner script",
                 "Cause.$": "$.pollCommandInvocationResponse.errorMessage",
+                "isWrapperError": true
+            },
+            "ResultPath": "$.errorInfo",
+            "Next": "Is failed operation an update or provision?"
+        },
+        "Convert timed out structure": {
+            "Type": "Pass",
+            "Comment": "Restructures message from timed out command invocation task in a format Notify SC failure task understands",
+            "Parameters": {
+                "Error": "Error running terraform-runner script",
+                "Cause.$": "States.Format('SSM run command execution with commandId {} timed out', $.sendApplyCommandResponse.commandId)",
                 "isWrapperError": true
             },
             "ResultPath": "$.errorInfo",
