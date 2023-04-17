@@ -75,7 +75,7 @@ pip3 install -r lambda-functions/state_machine_lambdas/requirements.txt \
 -t lambda-functions/state_machine_lambdas \
 --upgrade
 
-sam build
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 sam build
 
 echo "Deploying the bootstrap bucket stack."
 source $SCRIPT_DIR/deploy-bootstrap-bucket-stack.sh
