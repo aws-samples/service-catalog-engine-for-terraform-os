@@ -76,7 +76,7 @@ Note: Once done running all python commands call `deactivate` to stop using the 
 1. Cd to the root directory of the project.
 1. Run this command to install a local copy of the Python libraries required for the lambdas.
     * `pip3 install -r lambda-functions/state_machine_lambdas/requirements.txt -t lambda-functions/state_machine_lambdas --upgrade`
-1. Run `sam build`
+1. Run `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 sam build`
 1. Optional step: Run `python3 -m unittest` within the test containing directory to execute all unit tests in python
 1. Optional step: If you are a developer and want to invoke the Lambda functions locally, run `sam local invoke <Logical ID of the function>`
 
