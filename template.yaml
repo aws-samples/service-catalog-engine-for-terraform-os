@@ -517,6 +517,16 @@ Resources:
                   - !GetAtt TerraformAutoscalingGroupRole.Arn
             Resource:
               - !Sub ${TerraformStateBucket.Arn}/*
+          - Sid: DenyAccessToPublicEndpoint
+            Action: s3:*
+            Effect: Deny
+            Principal:
+              AWS: "*"
+            Condition:
+              StringNotEquals:
+                aws:SourceVpce: !Ref S3GatewayEndpoint
+            Resource:
+              - !Sub ${TerraformStateBucket.Arn}/*
 
   TerraformAutoscalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
