@@ -406,6 +406,7 @@ Resources:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Sub 'sc-terraform-engine-logging-${AWS::AccountId}-${AWS::Region}'
+      AccessControl: LogDeliveryWrite
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:
