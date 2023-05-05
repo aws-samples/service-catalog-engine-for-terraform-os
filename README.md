@@ -40,6 +40,30 @@ You can install the engine or update an existing engine by doing the following:
 1. From the root directory of the project, run ./bin/bash/deploy-tre.sh -r <region>
     * The region set in your default profile is not used during the automated installation. Instead, you will provide the region when executing this command.
 
+# Run from Docker
+
+To facilitate easy deployment all the dependencies have been built into a Docker image. To make use of this do the following:
+
+1. simply set your AWS enviroment variables:
+`export AWS_REGION=<DESIRED_REGION>
+export AWS_DEFAULT_REGION=<DESIRED_REGION>
+export AWS_ACCESS_KEY_ID=<ACCESS_KEY_ID>
+export AWS_SECRET_ACCESS_KEY=<SECRET_ACCESS_KEY>`
+
+1. Build docker image:
+`docker build ./ -t tre-deployer-image`
+
+1. Run docker image making use of current environment variables:
+`
+docker run -e AWS_REGION=${AWS_REGION} -e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} -it --rm -v $(pwd):/tre tre-deployer-image
+`
+
+1. Deploy TRE:
+`./bin/bash/deploy-tre.sh -r <region>`
+
+1. Once Deployed, exit:
+`exit`
+
 # Manually Install the Terraform Reference Engine
 
 If you prefer to install the engine manually, perform the steps in this section. These steps do not need to be performed if you used the automated script in the previous section.
