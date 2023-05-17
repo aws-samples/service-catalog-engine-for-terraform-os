@@ -67,3 +67,38 @@ func TestConfigFetcherFetchHappy(t *testing.T) {
 		t.Errorf("File content for %s is not as expected", TestS3BucketArtifactFileName)
 	}
 }
+
+func TestConfigFetcherFetchWithEmptyLaunchRoleHappy(t *testing.T) {
+	// setup
+	downloader := new(MockS3Downloader)
+	s3Downloader := &S3Downloader{
+		downloader: downloader,
+	}
+	configFetcher := &ConfigFetcher{
+		s3Downloader: s3Downloader,
+	}
+	input := TerraformOpenSourceParameterParserInput{
+		Artifact: Artifact{
+			Path: TestArtifactPath,
+			Type: TestArtifactType,
+		},
+		LaunchRoleArn: "",
+	}
+
+	// act
+	fileMap, err := configFetcher.fetch(input)
+
+	// assert
+	if err != nil {
+		t.Errorf("Unexpected error occured")
+	}
+
+	fileContent, ok := fileMap[TestS3BucketArtifactFileName]
+	if !ok {
+		t.Errorf("Expected file %s was not parsed", TestS3BucketArtifactFileName)
+	}
+
+	if reflect.DeepEqual(fileContent, TestS3BucketArtifactFileContent) {
+		t.Errorf("File content for %s is not as expected", TestS3BucketArtifactFileName)
+	}
+}

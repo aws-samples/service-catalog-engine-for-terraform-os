@@ -25,24 +25,7 @@ func TestValidateInputHappy(t *testing.T) {
 	}
 }
 
-func TestValidateInputWithEmptyArtifactThrowsParserInvalidParameterException(t *testing.T) {
-	// setup
-	input := TerraformOpenSourceParameterParserInput{
-		Artifact: Artifact{},
-		LaunchRoleArn: TestLaunchRoleArn,
-	}
-	expectedErrorMessage := fmt.Sprintf(RequiredKeyMissingOrEmptyErrorMessage, ArtifactKey)
-
-	// act
-	err := ValidateInput(input)
-
-	// assert
-	if !reflect.DeepEqual(err, ParserInvalidParameterException{Message: expectedErrorMessage}) {
-		t.Errorf("Validator did not throw ParserInvalidParameterException with expected error message")
-	}
-}
-
-func TestValidateInputWithEmptyLaunchRoleArnThrowsParserInvalidParameterException(t *testing.T) {
+func TestValidateInputWithEmptyLaunchRoleHappy(t *testing.T) {
 	// setup
 	input := TerraformOpenSourceParameterParserInput{
 		Artifact: Artifact{
@@ -51,7 +34,23 @@ func TestValidateInputWithEmptyLaunchRoleArnThrowsParserInvalidParameterExceptio
 		},
 		LaunchRoleArn: "",
 	}
-	expectedErrorMessage := fmt.Sprintf(RequiredKeyMissingOrEmptyErrorMessage, LaunchRoleArnKey)
+
+	// act
+	err := ValidateInput(input)
+
+	// assert
+	if err != nil {
+		t.Errorf("Validation failed for happy path input with empty launch role")
+	}
+}
+
+func TestValidateInputWithEmptyArtifactThrowsParserInvalidParameterException(t *testing.T) {
+	// setup
+	input := TerraformOpenSourceParameterParserInput{
+		Artifact: Artifact{},
+		LaunchRoleArn: TestLaunchRoleArn,
+	}
+	expectedErrorMessage := fmt.Sprintf(RequiredKeyMissingOrEmptyErrorMessage, ArtifactKey)
 
 	// act
 	err := ValidateInput(input)
