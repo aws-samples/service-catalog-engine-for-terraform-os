@@ -650,7 +650,6 @@ Resources:
               command: 'chown ec2-user:ec2-user /home/ec2-user/workspaces'
 
   # Role for running Terraform on an instance.
-  # Here we establish the convention that launch role names must always start with "SCLaunch*"
   # This role also has permission to download from a bootstrap bucket for python wheel/zip files.
   # See setup instructions for details on creating and filling the bootstrap bucket.
   TerraformAutoscalingGroupRole:
@@ -700,7 +699,7 @@ Resources:
               Effect: Allow
               Action:
                 - sts:AssumeRole
-              Resource: !Sub "arn:${AWS::Partition}:iam::*:role/SCLaunch*"
+              Resource: !Sub "arn:${AWS::Partition}:iam::*:role/*"
 
   TerraformInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -1003,7 +1002,7 @@ Resources:
             Statement:
               - Action: [ 'sts:AssumeRole' ]
                 Effect: Allow
-                Resource: !Sub "arn:${AWS::Partition}:iam::*:role/SCLaunch*"
+                Resource: !Sub "arn:${AWS::Partition}:iam::*:role/*"
               - Action: [ 's3:GetObject' ]
                 Effect: Allow
                 Resource: "arn:aws:s3:::*"

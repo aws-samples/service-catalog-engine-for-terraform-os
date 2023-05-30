@@ -162,7 +162,6 @@ Every terraform-open-source product must have a launch constraint that indicates
 An example launch role is here: ```cfn-templates/TerraformProvisioningAccount.yaml```
 
 The Terraform Reference Engine has the following requirements for the launch role.
-1. The name of the launch role must begin with SCLaunch.
 1. Grant sts:AssumeRole permission to some Terraform Reference Engine IAM roles.
     * The role used for parsing parameters in the provisioning artifact. This role is named ServiceCatalogTerraformOSParameterParserRole-<region>.
     * The role used for running Terraform commands. the named of this role is TerraformExecutionRole-<region>.
