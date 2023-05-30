@@ -22,7 +22,6 @@ const InvalidLaunchRoleArnSyntaxErrorMessage = "LaunchRoleArn %s is not a syntac
 const InvalidIamLaunchRoleArnErrorMessage = "LaunchRoleArn %s is not a valid iam ARN"
 const InvalidArtifactTypeErrorMessage = "Artifact type %s is not supported, must be AWS_S3"
 const InvalidArtifactPathErrorMessage = "Artifact path %s is not a valid S3 URI"
-const InvalidArtifactFileNameMessage = "Artifact path %s is not valid, must end with .tar.gz"
 
 // ValidateInput - Validates TerraformOpenSourceParameterParserInput
 // Returns a non nil error if an invalid input is provided
@@ -52,12 +51,6 @@ func validateRequiredKeysExist(input TerraformOpenSourceParameterParserInput) er
 		}
 	}
 
-	if input.LaunchRoleArn == "" {
-		return ParserInvalidParameterException{
-			Message: fmt.Sprintf(RequiredKeyMissingOrEmptyErrorMessage, LaunchRoleArnKey),
-		}
-	}
-
 	if input.Artifact.Path == "" {
 		return ParserInvalidParameterException{
 			Message: fmt.Sprintf(RequiredKeyMissingOrEmptyErrorMessage, ArtifactPathKey),
@@ -74,6 +67,12 @@ func validateRequiredKeysExist(input TerraformOpenSourceParameterParserInput) er
 }
 
 func validateLaunchRoleArnIsSyntacticallyCorrect(launchRoleArnString string) error {
+
+	// skip validation if launch role is not provided
+	if launchRoleArnString == "" {
+		return nil
+	}
+
 	launchRoleArn, err := arn.Parse(launchRoleArnString)
 	if err != nil {
 		return ParserInvalidParameterException{

@@ -221,9 +221,9 @@ Only files with .tf filename extension in the zipped .tar.gz provisioning artifa
 
 #### Launch Role
 
-The Service Catalog Terraform Open Source Parameter Parser assumes the provided launch role to download the artifact
+The Service Catalog Terraform Open Source Parameter Parser assumes the provided launch role to download the artifact if a launch role is provided in the payload. If no launch role is provided, parameter parser will use the default lambda execution role ServiceCatalogTerraformOSParameterParserRole credentials to download the artifact.
 
-The launch role arn must be a valid IAM arn that has access to the artifact and is assumable by the parser lambda
+If provided, the launch role arn must be a valid IAM arn that has access to the artifact and is assumable by the parser lambda.
 
 ### Override Files
 
