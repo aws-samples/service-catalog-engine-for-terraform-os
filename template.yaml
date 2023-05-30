@@ -1004,6 +1004,12 @@ Resources:
               - Action: [ 'sts:AssumeRole' ]
                 Effect: Allow
                 Resource: !Sub "arn:${AWS::Partition}:iam::*:role/SCLaunch*"
+              - Action: [ 's3:GetObject' ]
+                Effect: Allow
+                Resource: "arn:aws:s3:::*"
+                Condition:
+                  StringEquals:
+                    "s3:ExistingObjectTag/servicecatalog:provisioning": "true"
             Version: '2012-10-17'
           PolicyName: lambdaPermissions
       AssumeRolePolicyDocument:

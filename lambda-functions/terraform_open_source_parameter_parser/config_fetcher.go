@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -18,7 +19,7 @@ type ConfigFetcher struct {
 }
 
 func NewConfigFetcher(launchRoleArn string) (*ConfigFetcher, error) {
-	s3Downloader, err := NewS3Downloader(retrieveLaunchRoleCreds(launchRoleArn))
+	s3Downloader, err := NewS3Downloader(retrieveConfigFetcherCreds(launchRoleArn))
 	if err != nil {
 		return &ConfigFetcher{},
 		ParserAccessDeniedException{Message: fmt.Sprintf(LaunchRoleAccessDeniedErrorMessage, launchRoleArn, err.Error())}
@@ -44,6 +45,17 @@ func (c *ConfigFetcher) fetch(input TerraformOpenSourceParameterParserInput) (ma
 	}
 
 	return fileMap, nil
+}
+
+func retrieveConfigFetcherCreds(launchRoleArn string) *credentials.Credentials {
+	// use default lambda execution role creds to retrieve configuration templates if launch role is not provided
+	if launchRoleArn == "" {
+		log.Print("Launch role is not provided. Using default ServiceCatalogTerraformOSParameterParserRole credentials to fetch artifact.")
+		return credentials.NewEnvCredentials()
+	} else {
+		log.Printf("Using launch role %s credentials to fetch artifact.", launchRoleArn)
+		return retrieveLaunchRoleCreds(launchRoleArn)
+	}
 }
 
 // Assumes provided launchRoleArn and return its credentials
