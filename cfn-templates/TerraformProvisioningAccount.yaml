@@ -53,7 +53,7 @@ Resources:
                   - s3:Get*
                   - s3:List*
                   - s3:PutBucketTagging
-                Resource: "arn:aws:s3:::*"
+                Resource: !Sub "arn:${AWS::Partition}:s3:::*"
               # Resource group and tagging permissions required for Service Catalog terraform open source products
               - Effect: Allow
                 Action:
