@@ -33,7 +33,7 @@ Example:
                   - s3:Get*
                   - s3:List*
                   - s3:PutBucketTagging
-                Resource: "arn:aws:s3:::*"
+                Resource: !Sub "arn:${AWS::Partition}:s3:::*"
               - Effect: Allow
                 Action: 
                   - resource-groups:CreateGroup
@@ -90,7 +90,7 @@ Example:
                   - s3:PutBucketNotification
                   - s3:PutBucketWebsite
                   - s3:PutBucketTagging
-                Resource: "arn:aws:s3:::*"
+                Resource: !Sub "arn:${AWS::Partition}:s3:::*"
               - Effect: Allow
                 Action: 
                   - sns:CreateTopic

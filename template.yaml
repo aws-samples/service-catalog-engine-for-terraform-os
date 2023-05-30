@@ -1005,7 +1005,7 @@ Resources:
                 Resource: !Sub "arn:${AWS::Partition}:iam::*:role/*"
               - Action: [ 's3:GetObject' ]
                 Effect: Allow
-                Resource: "arn:aws:s3:::*"
+                Resource: !Sub "arn:${AWS::Partition}:s3:::*"
                 Condition:
                   StringEquals:
                     "s3:ExistingObjectTag/servicecatalog:provisioning": "true"
