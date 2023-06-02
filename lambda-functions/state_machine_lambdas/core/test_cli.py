@@ -1,6 +1,6 @@
 from unittest import main, TestCase
 
-from core.cli import create_runuser_command_with_default_user, double_escape_double_quotes, double_escape_double_quotes_and_backslashes, triple_escape_double_single_quotes
+from core.cli import create_runuser_command_with_default_user, double_escape_double_quotes, double_escape_double_quotes_and_backslashes, triple_escape_double_single_quotes, escape_quotes_backslashes
 
 class TestCli(TestCase):
 
@@ -133,6 +133,18 @@ class TestCli(TestCase):
 
         # Assert
         self.assertEqual(expected, actual)
+    
+    def test_escape_quotes_backslashes_happy_path(self):
+        # Arrange
+        input = [None, '', '"key": "aws_amis", "value": "{\"us-east-1\":\"ami-5f709f34\",\"us-west-2\":\"ami-7f675e4f\"}"', "Testing it's all good ?"]
+        expected = [None, '', '\\"key\\": \\"aws_amis\\", \\"value\\": \\"{\\\"us-east-1\\\":\\\"ami-5f709f34\\\",\\\"us-west-2\\\":\\\"ami-7f675e4f\\\"}\\"', "Testing it'\\''s all good ?"]
+        
+        for index, data in enumerate(input):
+            # Act
+            actual = escape_quotes_backslashes(data)
+
+            # Assert
+            self.assertEqual(expected[index], actual)
 
 if __name__ == '__main__':
     main()
