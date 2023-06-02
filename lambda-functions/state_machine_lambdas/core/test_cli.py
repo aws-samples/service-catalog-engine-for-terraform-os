@@ -1,6 +1,6 @@
 from unittest import main, TestCase
 
-from core.cli import create_runuser_command_with_default_user, double_escape_double_quotes, double_escape_double_quotes_and_backslashes
+from core.cli import create_runuser_command_with_default_user, double_escape_double_quotes, double_escape_double_quotes_and_backslashes, triple_escape_double_single_quotes
 
 class TestCli(TestCase):
 
@@ -99,6 +99,40 @@ class TestCli(TestCase):
         # Assert
         self.assertEqual(expected, actual)
 
+    def test_triple_escape_double_single_quotes_happy_path(self):
+        # Arrange
+        input = "Testing user's parameter"
+        expected = "Testing user'\\''s parameter"
+
+        # Act
+        actual = triple_escape_double_single_quotes(input)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+    def test_triple_escape_double_single_quotes_input_is_None(self):
+        # Arrange
+        input = None
+        expected = None
+
+        # Act
+        actual = triple_escape_double_single_quotes(input)
+
+        # Assert
+        self.assertEqual(expected, actual)
+
+
+    def test_triple_escape_double_single_quotes_input_is_empty(self):
+        # Arrange
+        input = ''
+        expected = ''
+
+        # Act
+        actual = triple_escape_double_single_quotes(input)
+
+        # Assert
+        self.assertEqual(expected, actual)
 
 if __name__ == '__main__':
     main()
