@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from core.cli import create_runuser_command_with_default_user, double_escape_double_quotes, double_escape_double_quotes_and_backslashes
+from core.cli import create_runuser_command_with_default_user, escape_quotes_backslashes
 from core.configuration import Configuration
 from core.exception import log_exception
 from core.ssm_facade import SsmFacade
@@ -111,7 +111,7 @@ def __get_tags_text(event: dict) -> str:
     total_tags = [event[TRACER_TAG_KEY]]
     if TAGS_KEY in event:
         total_tags += event[TAGS_KEY]
-    return double_escape_double_quotes_and_backslashes(json.dumps(total_tags))
+    return escape_quotes_backslashes(json.dumps(total_tags))
 
 def __get_command_text(event: dict) -> str:
     """Creates the command to run on the instance based on the Lambda input event.
@@ -125,7 +125,7 @@ def __get_command_text(event: dict) -> str:
     -------
         str: The command text
     """
-    artifact_parameters_text = double_escape_double_quotes_and_backslashes(__get_optional_json(event, PARAMETERS_KEY))
+    artifact_parameters_text = escape_quotes_backslashes(__get_optional_json(event, PARAMETERS_KEY))
     tags_text = __get_tags_text(event)
 
     base_command = f"""python3 -m terraform_runner --action=apply \

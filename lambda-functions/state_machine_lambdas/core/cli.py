@@ -25,3 +25,23 @@ def double_escape_double_quotes_and_backslashes(input: str) -> str:
     if '\\' in input:
         input = input.replace('\\', '\\\\')
     return input.replace('"', '\\"')
+
+def triple_escape_double_single_quotes(input: str) -> str:
+    """Add triple escape backslashes and a double single quotes in a string.
+    Used to allow single quotes in user paramenter in command parameter string.
+    If input is empty or None, input is returned
+    """
+    if not input:
+        return input
+    return input.replace("'", "'\\\''")
+
+def escape_quotes_backslashes(input: str) -> str:
+    """
+        For double backslashes adds double backslash
+        For single double adds double backslashes
+        For single quotes adds double backslashes and double single quotes
+    """
+    if not input:
+        return input
+    input =  double_escape_double_quotes_and_backslashes(input)
+    return triple_escape_double_single_quotes(input)
