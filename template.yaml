@@ -116,6 +116,11 @@ Parameters:
     MinValue: 128
     MaxValue: 10240
 
+  EC2InstanceType:
+    Default: t2.medium
+    Description: The type of EC2 instance used by the auto scaling group
+    Type: String
+
 Resources:
   # VPC for Terraform Reference Engine
   VPC:
@@ -592,7 +597,7 @@ Resources:
         IamInstanceProfile:
           Name: !Ref TerraformInstanceProfile
         ImageId: !Ref ServerLatestAmiId
-        InstanceType: t2.micro
+        InstanceType: !Ref EC2InstanceType
         MetadataOptions:
           HttpTokens: required
         UserData:

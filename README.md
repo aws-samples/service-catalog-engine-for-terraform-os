@@ -116,6 +116,8 @@ In this step we build the Python scripts that will run on EC2 instances to manag
 1. The default settings can be overridden by passing the parameters in the `template.yaml`. 
    * Example command for updating the default VPC setting -
       `--parameter-overrides VpcCidr="<Your_VpcCidr>" PublicSubnet1CIDR="<Your_PublicSubnet1CIDR>" PrivateSubnet1CIDR="<Your_PrivateSubnet1CIDR>"`
+   * Example command for updating the default EC2 instance type setting -
+     `--parameter-overrides EC2InstanceType="<Your_EC2InstanceType>"`
 
 ## Replace Current EC2 Instances
 
