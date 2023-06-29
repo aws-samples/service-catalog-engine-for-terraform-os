@@ -144,6 +144,14 @@ If you see this error during an update of the SAM-TRE stack:
 
 Solution: Terminate your EC2 instances named TerraformExecutionInstance. Then rerun the failed command.
 
+#### NOTE: Consider following the below steps if you are attempting to update an already in-use installation
+1. **Manually disable the Lambda subscription to the provisioning intake SQS queues.** This will allow messages to be sent to the queues by Service Catalog but prevent the EC2 instance(s) from starting new workflows that could be affected by shutting down the EC2 instances in following steps
+1. **Navigate to Step Functions console and confirm there are no ongoing workflow executions. If there are, wait until they are complete before proceeding to the next step.** Similar to the last step, this will help ensure no ongoing executions are impacted by shutting down the EC2 instances in the following steps.
+1. **Shut down the instances in the ASG for this installation.** This will allow the deployment to update the attached security groups.
+1. **Proceed with deployment via the method of your choice (manually or through the delpoyment script as described above in this README).**
+1. **Ensure the EC2 instances have started back up successfully.** The deployment script should guarantee this step, but it may be necessary to manually start them through the EC2 console.
+1. **Re-enable the Lambda subscription to the provisioning intake SQS queues.**
+
 # Create and Provision a Service Catalog Product
 
 In addition to the steps included in this readme, more information about creating and provisioning a service catalog product can be found here: https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html
