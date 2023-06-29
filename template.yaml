@@ -86,15 +86,6 @@ Parameters:
     Description: Please enter the IP range (CIDR notation) for the private subnet 3 (not supported in all regions)
     Type: String
 
-  SSHLocation:
-    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
-    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-    Default: 0.0.0.0/0
-    Description: The IP address range that can be used to access the instance using SSH.
-    MaxLength: 18
-    MinLength: 9
-    Type: String
-
   RIPMoreThan2AZsParameter:
     Default: 'false'
     Type: String
@@ -384,13 +375,17 @@ Resources:
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: SSH (port 22)
+      GroupDescription: TerraformEngineInstanceSecurityGroup
       VpcId: !Ref VPC
-      SecurityGroupIngress:
+      SecurityGroupEgress:
         - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref SSHLocation
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
 
   S3GatewayEndpoint:
     Type: AWS::EC2::VPCEndpoint
