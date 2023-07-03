@@ -144,6 +144,16 @@ If you see this error during an update of the SAM-TRE stack:
 
 Solution: Terminate your EC2 instances named TerraformExecutionInstance. Then rerun the failed command.
 
+#### NOTE: Consider following the below steps if you are attempting to update an already in-use installation
+1. **Manually disable the SQS triggers for the `TerraformEngineProvisioningHandlerLambda` and `TerraformEngineTerminateHandlerLambda` Lambda functions.** This will allow messages to be sent to the queues by Service Catalog but prevent the EC2 instance(s) from starting new workflows that could be affected by shutting down the EC2 instances in the following steps.
+1. **Navigate to Step Functions console and confirm there are no ongoing workflow executions in the `ManageProvisionedProductStateMachine` and `TerminateProvisionedProductStateMachine` state machines. If there are ongoing executions, wait until they are complete before proceeding to the next step.** Similar to the last step, this will help ensure no ongoing executions are impacted by shutting down the EC2 instances in the following steps.
+1. **Trigger with deployment via the method of your choice (manually or through the deployment script as described above in this README).**
+1. **Monitor the deployment of the SAM-TRE stack in CloudFormation and intermittently refresh until you see an event for an update/delete failure for the security group being modified.** You will see an error message in the event similar to above. This means the deployment is stuck attempting to update the security group and you can proceed to the next step to unblock it.
+1. **Shut down the instances in the ASG for TRE.** This will allow the deployment to update the attached security groups.
+1. **Go back to the deployment of the SAM-TRE stack in CloudFormation and wait for the update/delete retry of the security group to succeed and continue to monitor the rest of the deployment.**
+1. **Ensure the EC2 instances have started back up successfully.** The deployment script should guarantee this step, but it may be necessary to manually start them through the EC2 console.
+1. **Re-enable the SQS triggers for the `TerraformEngineProvisioningHandlerLambda` and `TerraformEngineTerminateHandlerLambda` Lambda functions.** This step will restart processing of any messages that have been waiting in the queue during the update procedure.
+
 # Create and Provision a Service Catalog Product
 
 In addition to the steps included in this readme, more information about creating and provisioning a service catalog product can be found here: https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html
