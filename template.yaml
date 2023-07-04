@@ -585,7 +585,7 @@ Resources:
       LaunchTemplateData:
         NetworkInterfaces:
           - DeviceIndex: 0
-            AssociatePublicIpAddress: true
+            AssociatePublicIpAddress: false
             Groups:
               - !Ref InstanceSecurityGroup
             DeleteOnTermination: true
