@@ -1,16 +1,33 @@
-Resources:
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  This template deploys the resources required to bootstrap the Terraform Reference Engine 
+  in your AWS environment.
 
-  # Bucket used for code assets and other objects required to bootstrap the main Sam template
+Parameters:
+  BucketNamePrefix:
+    Type: String
+    Default: "terraform-engine-bootstrap"
+    Description: >-
+      (Optional) The name prefix that should be used when creating the S3 bucket needed 
+      to bootstrap the Terraform Reference Engine (TRE) and store deployment artifacts. 
+      Defaults to "terraform-engine-bootstrap".
+
+Resources:
   TerraformBootstrapBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub 'terraform-engine-bootstrap-${AWS::AccountId}-${AWS::Region}'
+      BucketName: !Sub '${BucketNamePrefix}-${AWS::AccountId}-${AWS::Region}'
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   TerraformBootstrapBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -18,18 +35,28 @@ Resources:
       Bucket: !Ref TerraformBootstrapBucket
       PolicyDocument:
         Statement:
-          - Action: s3:*
-            Effect: Deny
-            Principal: "*"
+          - Effect: Allow
+            Principal:
+              Service: "serverlessrepo.amazonaws.com"
+            Action:
+              - s3:GetObject
             Resource:
               - !Sub ${TerraformBootstrapBucket.Arn}/*
+            Condition:
+              StringEquals: {"aws:SourceAccount": !Ref 'AWS::AccountId'}
+          - Effect: Deny
+            Principal: "*"
+            Action:
+              - s3:*
+            Resource:
               - !Sub ${TerraformBootstrapBucket.Arn}
+              - !Sub ${TerraformBootstrapBucket.Arn}/*
             Condition:
               Bool: {"aws:SecureTransport": false}
 
 Outputs:
   BootstrapBucketArn:
-    Description: Arn of the bootstrap bucket
+    Description: Arn of the bootstrap bucket.
     Value: !GetAtt TerraformBootstrapBucket.Arn
     Export:
       Name: TerraformEngineBootstrapBucketArn

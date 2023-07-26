@@ -1,0 +1,17 @@
+{
+    "AcceptLanguage": "en",
+    "Name": "Terraform Example - Security Operations Bucket",
+    "Owner": "Amazon",
+    "Description": "Creates an S3 Bucket configured for secure cross-account use by the Security Operations Team.",
+    "Distributor": "Amazon",
+    "ProductType": "TERRAFORM_OPEN_SOURCE",
+    "ProvisioningArtifactParameters": {
+        "Name": "v1.0.0",
+        "Description": "Creates an S3 Bucket configured for secure cross-account use by the Security Operations Team.",
+        "Type": "TERRAFORM_OPEN_SOURCE",
+        "DisableTemplateValidation": true,
+        "Info": {
+            "LoadTemplateFromURL": ""
+        }
+    }
+}

@@ -3,6 +3,8 @@ Transform: AWS::Serverless-2016-10-31
 Description: The infrastructure template for Terraform Engine
 
 Conditions:
+  BootstrapBucketNameEmpty: !Equals [!Ref "BootstrapBucketName", ""]
+
   MoreThan2AZs:
     Fn::And:
     - { Condition: MoreThan1AZ }
@@ -35,7 +37,7 @@ Parameters:
     Type: String
 
   ServiceCatalogVerifySsl:
-    Default: true
+    Default: "true"
     AllowedValues:
       - false
       - true
@@ -111,6 +113,29 @@ Parameters:
     Default: t2.medium
     Description: The type of EC2 instance used by the auto scaling group
     Type: String
+
+  TerraformRunnerVersion:
+    Type: String
+    Description: >-
+      (Optional) The version of the Terraform Runner that should be downloaded by the Terraform 
+      Reference Engine execution instances.
+    Default: "1.0.0"
+    AllowedPattern: ^(\d+\.)?(\d+\.)?(\d)$
+
+  BootstrapBucketName:
+    Type: String
+    Description: >-
+      (Optional) The name of the S3 bucket where the Terraform Reference Engine templates and 
+      binary distribution artifacts required to bootstrap the TRE environment are stored.
+    Default: ""
+
+  BootstrapBucketNamePrefix:
+    Type: String
+    Description: >-
+      (Optional) Used to dynamically compute the name of the S3 bucket used to store the 
+      artifacts required to bootstrap the TRE environment when no bucket name is explicitly
+      set via the `BootstrapBucketName` parameter.
+    Default: "terraform-engine-bootstrap"
 
 Resources:
   # VPC for Terraform Reference Engine
@@ -637,10 +662,14 @@ Resources:
             01_download_wheel:
               command: 
                 !Sub
-                  - 'aws s3 cp s3://${BootstrapBucketName}/dist/terraform_runner-0.1-py3-none-any.whl /tmp/terraform_runner-0.1-py3-none-any.whl --region ${AWS::Region}'
-                  - BootstrapBucketName: !ImportValue TerraformEngineBootstrapBucketName
+                  - 'aws s3 cp s3://${BootstrapBucket}/dist/terraform_runner-${Version}-py3-none-any.whl /tmp/terraform_runner-${Version}-py3-none-any.whl --region ${AWS::Region}'
+                  - BootstrapBucket: !If [ BootstrapBucketNameEmpty, !Sub "${BootstrapBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}", !Ref BootstrapBucketName]
+                    Version: !Ref TerraformRunnerVersion
             02_install_wheel:
-              command: 'pip3 install /tmp/terraform_runner-0.1-py3-none-any.whl'
+              command:
+                !Sub
+                  - 'pip3 install /tmp/terraform_runner-${Version}-py3-none-any.whl'
+                  - Version: !Ref TerraformRunnerVersion
 
         create_workspaces_parent_dir:
           commands:
@@ -962,10 +991,14 @@ Resources:
 
   ParameterParser:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
     Properties:
       FunctionName: ServiceCatalogTerraformOSParameterParser
+#      CodeUri: lambda-functions/terraform_open_source_parameter_parser/
+#      Handler: terraform_open_source_parameter_parser
       CodeUri: lambda-functions/terraform_open_source_parameter_parser/
-      Handler: terraform_open_source_parameter_parser
+      Handler: bootstrap
       VpcConfig:
         SubnetIds: !If
           - MoreThan2AZs
@@ -979,9 +1012,7 @@ Resources:
             - - !Ref PrivateSubnet1
         SecurityGroupIds:
           - !GetAtt VPC.DefaultSecurityGroup
-      Runtime: go1.x
-      Architectures:
-        - x86_64
+      Runtime: provided.al2
       MemorySize: !Ref ParameterParserLambdaMemorySize
       Timeout: 100
       Role:
@@ -1003,6 +1034,13 @@ Resources:
               - Action: [ 'sts:AssumeRole' ]
                 Effect: Allow
                 Resource: !Sub "arn:${AWS::Partition}:iam::*:role/*"
+              - Action:
+                  - 's3:GetObject'
+                Effect: Allow
+                Resource:
+                  - !Sub
+                    - "arn:${AWS::Partition}:s3:::${BootstrapBucket}/*"
+                    - BootstrapBucket: !If [ BootstrapBucketNameEmpty, !Sub "${BootstrapBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}", !Ref BootstrapBucketName]
               - Action: [ 's3:GetObject' ]
                 Effect: Allow
                 Resource: !Sub "arn:${AWS::Partition}:s3:::*"

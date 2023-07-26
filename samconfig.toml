@@ -1,0 +1,25 @@
+version = 1.0
+
+[default]
+[default.global]
+[default.global.parameters]
+stack_name = "SAM-TRE"
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset = false
+disable_rollback = false
+resolve_s3 = false
+
+[default.build.parameters]
+cached = true
+parallel = true
+use_container = true
+build_image = [
+    "amazon/aws-sam-cli-build-image-python3.9",
+    "ParameterParser=amazon/aws-sam-cli-build-image-go1.x"
+]
+
+
+[default.validate.parameters]
+lint = true

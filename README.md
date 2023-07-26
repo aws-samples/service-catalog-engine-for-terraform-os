@@ -1,217 +1,491 @@
-# AWS Service Catalog Engine for Terraform open source
+# AWS Service Catalog Reference Engine for Terraform Open Source
 
-The AWS Service Catalog Terraform Reference Engine (TRE) provides an example for you to configure and install a Terraform open source engine in your AWS Service Catalog administrator account. With the engine installed into your account, you can use Service Catalog as a single tool to organize, govern, and distribute your Terraform configurations within AWS.
-For more information about Terraform open source and AWS Service Catalog, see [Getting started with Terraform open source.](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html)
+The Terraform Reference Engine (TRE) project provides a reference solution you can use to deploy a [Terraform open 
+source](https://developer.hashicorp.com/terraform/intro/terraform-editions#terraform-open-source) provisioning engine 
+in your AWS Service Catalog central administration account (e.g., hub account). With the Terraform Reference Engine 
+deployed, you can now use AWS Service Catalog to organize and enable self-service provisioning with governance for 
+your Terraform configurations within AWS at scale.
 
-# Pre-requisites
+You only need to deploy the Terraform Reference Engine once, in your AWS Service Catalog hub account, and the setup 
+takes just a few minutes using the [automated deployment tools](tools/deploy-terraform-engine.sh) provided in this 
+project.
 
-The installation can be done from any Linux or Mac machine.
+For more information about Terraform Open Source and AWS Service Catalog, see the [Getting Started with Terraform Open Source](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html)
+section of the AWS Service Catalog Administrator Guide.
 
-## Install tools
+---
 
-1. Install AWS SAM CLI: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html
-1. Install Docker (only required if you want to run the Lambda functions in your development environment): https://docs.docker.com/engine/install/
-1. Install AWS CLI https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-1. Install Go https://go.dev/doc/install
-1. Install Python 3.9. Sam will require this exact version even if you have a newer version. https://www.python.org/downloads/release/python-3913/
+## Installation Prerequisites
 
-# Automatically Install the Terraform Reference Engine
+The Terraform Reference Engine can be installed from any Linux or macOS environment with the following pre-requisites 
+installed:
+   - 📦 Docker: [_Docker Desktop for Mac_](https://docs.docker.com/desktop/install/mac-install/), [_Docker Engine for Linux_](https://docs.docker.com/engine/install/)
+   - 🐍 Python 3: [_Python 3 Releases for macOS_](https://www.python.org/downloads/macos/), [_Python 3 Releases for Linux_](https://www.python.org/downloads/source/)
+   - ☁️ AWS CLI: [_Install or Update the AWS CLI_](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
-The project includes a set of scripts to automatically install a new environment or update an existing environment. The script does the following:
-1. Performs all installation steps.
-1. If the installation is updating an existing environment, it safely replaces the EC2 instances.
-    1. Pauses SQS message processing
-    1. Waits for all state machine executions to finish
-    1. Replaces EC2 instances
-    1. Resumes SQS message processing.
+> [!NOTE]
+> _You must also ensure your environment is [properly configured with valid AWS credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials)
+> and a region is set for the AWS environment where the Terraform Reference Engine is or will be deployed._
 
-The automated installation requires that the following are available on your local machine. If they are not available, please follow the instructions below for manual installation.
+_The tools in this project automatically check for the mandatory prerequisites. You can check that your local  
+environment meets all prerequisites at any time by running `make check-prerequisites` from the 
+[project root directory](.):_
+```shell
+❯ make check-prerequisites
+[ERROR] Docker is required but the daemon is not running, please start it and try again.
+make: *** [check-docker] Error 1
 
-1. bash
-1. jq
-
-The instance replacement process can take a long time if you have long-running provisioning operations in flight.
-
-The automated installation  assumes you are using the default profile to store your AWS Credentials. Follow https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html to set up credentials.
-
-You can install the engine or update an existing engine by doing the following:
-
-1. Git clone the project
-1. From the root directory of the project, run ./bin/bash/deploy-tre.sh -r <region>
-    * The region set in your default profile is not used during the automated installation. Instead, you will provide the region when executing this command.
-
-# Manually Install the Terraform Reference Engine
-
-If you prefer to install the engine manually, perform the steps in this section. These steps do not need to be performed if you used the automated script in the previous section.
-
-## Setup Your Environment
-
-1. Git clone the project.
-1. Setup the following environment variables:
-    ```
-    AWS_ACCOUNT_ID=<YOUR AWS ACCOUNT ID>
-    AWS_REGION=<YOUR REGION OF CHOICE>
-    ```
-
-The manual instructions assume you are using the default profile to store your AWS Credentials and region. Follow https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html to set up credentials and region.
-
-## Build the code
-
-### Build the ServiceCatalogTerraformOSParameterParser function
-
-1. Cd to the directory `lambda-functions/terraform_open_source_parameter_parser`
-1. Run `go mod init terraform_open_source_parameter_parser` to initialize the terraform_open_source_parameter_parser Go module
-1. Run `go env -w GOPROXY=direct`
-1. Run `go mod tidy` to generate the required `go.mod` and `go.sum` files
-1. Optional step: Run `go test` within the test containing directory to execute all unit tests in Go
-
-### Create a python virtual environment
-1. Create the virtual environment in directory `venv` by running the command `python3 -m venv venv`
-1. Activate the newly created pythong virtual environment `. venv/bin/activate`
-
-Note: Once done running all python commands call `deactivate` to stop using the virtual environment.
-
-### Build the Lambda functions 
-
-1. Cd to the root directory of the project.
-1. Run this command to install a local copy of the Python libraries required for the lambdas.
-    * `pip3 install -r lambda-functions/state_machine_lambdas/requirements.txt -t lambda-functions/state_machine_lambdas --upgrade`
-1. Run `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 sam build`
-1. Optional step: Run `python3 -m unittest` within the test containing directory to execute all unit tests in python
-1. Optional step: If you are a developer and want to invoke the Lambda functions locally, run `sam local invoke <Logical ID of the function>`
-
-## Deploying to an AWS Account
-
-### Create the bootstrap bucket
-
-Use the Cloudformation console or CLI to create a stack using the Bootstrap.yaml template:
-
-    ```
-    AWS242TerraformReferenceEngine (package-root)
-    └── cfn-templates
-        └── Bootstrap.yaml
-    ```
-
-To use the CloudFormation CLI, run this example CLI command -
-
+❯ make check-prerequisites         
+All prerequisites are installed and configured properly.
 ```
-    aws cloudformation create-stack --stack-name Bootstrap-TRE --template-body file://cfn-templates/Bootstrap.yaml --capabilities CAPABILITY_NAMED_IAM
+---
+
+## Automated Installation
+
+This project includes [tools](tools) that will help you easily deploy and manage the Terraform Reference Engine (TRE) 
+in your AWS environment:
+   - 🚀 [**deploy-terraform-engine.sh**](tools/deploy-terraform-engine.sh): enables you to easily deploy the Terraform 
+     Reference Engine (TRE) in your AWS environment or safely update a previously deployed TRE environment. 
+   - 🔎 [**manage-terraform-engine.py**](tools/manage-terraform-engine.py): enables you to safely and easily manage the 
+     status of the Terraform Reference Engine deployed in your AWS environment: pause or resume request processing, 
+     quiesce all actively executing requests, and terminate or replace execution instances.
+
+To deploy the Terraform Reference Engine in your AWS environment, or to update an existing deployment, execute the 
+following command, replacing `<AWS_REGION>` with the correct region for your AWS environment:
+```shell
+❯ ./tools/deploy-terraform-engine.sh --region <AWS_REGION>
 ```
+> [!NOTE]
+> _If you do not pass the `--region` option, the script will attempt to automatically determine the correct region by
+> checking the `AWS_REGION`, `AWS_PROFILE_REGION`, and `AWS_DEFAULT_REGION` environment variables (in order of
+> precedence) and fail if the region cannot be determined._
 
-This will create a bucket named terraform-engine-bootstrap-<your_account_id>-<region>. Code build artifacts will be made available to the deployment process from this bucket.
+> [!NOTE]
+> _The [**deploy-terraform-engine.sh**](tools/deploy-terraform-engine.sh) tool automatically detects when it is run in
+> an AWS environment with a previously Terraform Reference Engine deployment, and will safely pause the Terraform 
+> Reference Engine before proceeding. See the [tool documentation](tools/README.md) for additional detail._
+---
 
-### Deploy the Terraform CLI wrapper scripts
+## Manual Installation
 
-In this step we build the Python scripts that will run on EC2 instances to manage Terraform CLI commands. Then we upload them to the bootstrap bucket created in the previous step.
+If you prefer to install the Terraform Reference Engine manually, you may perform the following steps. Please note, 
+unless otherwise specified, all commands should be executed from the [project root directory](.).
 
-1. cd to the `wrapper-scripts` directory: `cd wrapper-scripts`
-1. Install python wheel package: `pip install wheel`
-1. Run: `python3 setup.py bdist_wheel`
-1. Run: `aws s3 sync dist s3://terraform-engine-bootstrap-$AWS_ACCOUNT_ID-$AWS_REGION/dist`
+> [!NOTE]
+> _To proceed with the manual installation steps, please ensure your local environment meets [all prerequisite](#installation-prerequisites)
+> requirements._
 
-### Deploy the Terraform reference engine
+<details>
+  <summary><b>Manual Installation Steps</b></summary>
 
-1. cd to the root directory of the project.
-1. Run `sam deploy --s3-bucket terraform-engine-bootstrap-$AWS_ACCOUNT_ID-$AWS_REGION --stack-name SAM-TRE --capabilities CAPABILITY_NAMED_IAM`
-1. The default settings can be overridden by passing the parameters in the `template.yaml`. 
-   * Example command for updating the default VPC setting -
-      `--parameter-overrides VpcCidr="<Your_VpcCidr>" PublicSubnet1CIDR="<Your_PublicSubnet1CIDR>" PrivateSubnet1CIDR="<Your_PrivateSubnet1CIDR>"`
-   * Example command for updating the default EC2 instance type setting -
-     `--parameter-overrides EC2InstanceType="<Your_EC2InstanceType>"`
+  ### Setup Your Environment
+In this step, you will ensure your local environment passes all prerequisite checks and that you have a Python virtual 
+environment that is properly configured for Terraform Reference Engine development.
 
-## Replace Current EC2 Instances
+1. Ensure an AWS region is set in your environment by executing the following command, replacing
+   `<AWS_REGION>` with the correct region for your AWS environment:
+   ```shell
+   ❯ export AWS_REGION=<AWS_REGION>
+   ```
+2. Ensure an AWS account ID is set in your environment by executing the following command:
+   ```shell
+   ❯ export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account 2>&1 | egrep "^[0-9]{12}$")
+   ❯ [[ -z "${AWS_ACCOUNT_ID}" ]] && echo "[ERROR] Unable to determine the ID of your AWS account, please ensure your `
+       `AWS credentials are valid and your profile is configured properly."
+   ```
+3. Verify your local environment passes all prerequisite checks by executing the following command:
+   ```shell
+   ❯ make check-prerequisites
+   All prerequisites are installed and configured properly.
+   ```
+4. Create a new Python virtual environment in the project root directory (`.venv`) by executing the following command:
+   > _This step will automatically install all [baseline project requirements](./tools/requirements.txt) in the virtual 
+   > environment, upgrade all core Python packages (e.g., `setuptools`, `pip`, and `build`) to the latest version, and
+   > install the [`terraform_runner`](./wrapper-scripts/terraform_runner) package in editable mode._
+   ```shell
+   ❯ make venv
+   [...]
+   Building wheels for collected packages: terraform-runner
+   Building editable for terraform-runner (pyproject.toml) ... done
+   Created wheel for terraform-runner: filename=terraform_runner-1.0.0-0.editable-py3-none-any.whl size=10592 sha256=b247abd72f4e101b98cb04b8933822cc917461132ec436d85a73686a8f549582
+   Stored in directory: /private/var/folders/29/fg_zrvhs7c9ftv3n6pnp0yfh0000gr/T/pip-ephem-wheel-cache-bmp24orp/wheels/31/c6/a2/4544d1f14fe49ce67ea68109c29fb404dd2026299eae488c69
+   Successfully built terraform-runner
+   Installing collected packages: terraform-runner
+   Successfully installed terraform-runner-1.0.0
+   ```
 
-If you are updating an existing environment, you will need to replace the EC2 instances so the new instances will pick up the latest code. 
+### Deploy Bootstrap Resources
+In this step, you will deploy the S3 bucket used to store the Terraform Reference Engine templates and binary 
+distribution artifacts in your AWS environment. This project includes an [AWS CloudFormation template](cfn-templates/Bootstrap.yaml) 
+that you can use to create a properly configured S3 bucket. 
 
-To do this manually, you can run the instance replacement script.
+1. Create a new AWS CloudFormation stack using the [bootstrap template](./cfn-templates/Bootstrap.yaml) by executing 
+   the following command:
+   ```shell
+   ❯ aws cloudformation create-stack \
+       --stack-name Bootstrap-TRE \
+       --template-body file://cfn-templates/Bootstrap.yaml \
+       --region "${AWS_REGION}"
+   ```
+2. This stack creates an S3 bucket in your AWS environment using a standard name prefix (e.g., `terraform-engine-bootstrap`) 
+   with your 12-digit account ID and region appended. Once the CloudFormation stack has been successfully created, you 
+   can determine the bucket name created in your environment with the following command:
+   ```shell
+   ❯ export BOOTSTRAP_BUCKET=$(aws cloudformation describe-stacks \
+       --stack-name Bootstrap-TRE \
+       --region "${AWS_REGION}" \
+       --output text \
+       --query 'Stacks[].Outputs[1].OutputValue'
+     ) && echo "${BOOTSTRAP_BUCKET}"
+   terraform-engine-bootstrap-123456789012-us-east-2
+   ```
 
-```
-cd bin/bash
-pip3 install boto3
-export AWS_REGION=<your region>
-python3 replace-ec2-instances.py 
-```
+### Build Code Packages 
+In this step, you will build the `terraform_runner` Python package in your local environment and build the AWS Lambda
+Python and Go functions that the Terraform Reference Engine uses for its backend services and orchestration using 
+Docker build containers.
 
-Note: The instance replacement process can take a long time if you have long-running provisioning operations in flight.
+1. Initiate a local build of the `terraform_runner` Python package and a containerized build of the TRE Lambda 
+   functions by executing the following command:
+   ```shell
+   ❯ make build
 
-# Troubleshooting Installation Errors
+   Successfully built terraform_runner-1.0.0.tar.gz and terraform_runner-1.0.0-py3-none-any.whl
+   upload: wrapper-scripts/dist/terraform_runner-1.0.0-py3-none-any.whl to s3://terraform-engine-bootstrap-123456789012-us-east-2/dist/terraform_runner-1.0.0-py3-none-any.whl
+   Starting Build use cache                                                                                                                                                                                                                                                              
+   Starting Build inside a container 
+   [...]
+   Build Succeeded
+   Built Artifacts  : .aws-sam/build
+   Built Template   : .aws-sam/build/template.yaml
+   ```
+2. The `terraform_runner` binary distribution artifact will be automatically uploaded to the bootstrap S3 Bucket 
+   created in the previous step. You can verify this by executing the following command:
+   ```shell
+   ❯ aws s3 ls "s3://${BOOTSTRAP_BUCKET}/dist/"
+   2023-08-08 16:44:21      18532 terraform_runner-1.0.0-py3-none-any.whl
+   ```
 
-### Security Group Replacement
+### Deploy the Terraform Reference Engine
+In this step, you will use the AWS SAM CLI to deploy the Terraform Reference Engine to your AWS environment using 
+the TRE infrastructure template (.aws-sam/packaged.yaml) built by the `make build` target executed above.
 
-If you see this error during an update of the SAM-TRE stack:
+1. If the Terraform Reference Engine has already been deployed to the AWS environment, you will want to take some 
+   additional steps before updating your environment. The project contains a convenience target in the [Makefile](./Makefile) 
+   that will help you check if there is a pre-existing TRE deployment:
+   ```shell
+   ❯ make check-stack-exists
+   CloudFormation Stack Name: SAM-TRE
+   Terraform Reference Engine is DEPLOYED in AWS account 123456789012 and region us-east-2.
+   
+   ❯ make check-stack-exists
+   CloudFormation Stack Name: SAM-TRE
+   Terraform Reference Engine is NOT DEPLOYED in AWS account 123456789012 and region us-east-2.
+   make: *** [check-stack-exists] Error 1
+   ```
+2. _If the Terraform Reference Engine check returns a `DEPLOYED` state_, execute the following command to pause 
+   processing of new TRE provisioning requests and gracefully drain and terminate all TRE execution instances, waiting 
+   for any active TRE provisioning requests to complete.
+   ```shell
+   ❯ ./tools/manage-terraform-engine.py \
+       --region "${AWS_REGION}" \
+       --action stop \
+       --auto-approve
+   2023-08-09T09:59:27Z [INFO] - Checking the status of the Terraform Reference Engine in AWS account '123456789012' and region 'us-east-2'
+   2023-08-09T09:59:28Z [INFO] - Terraform Reference Engine Status: 'Enabled'
+   2023-08-09T09:59:28Z [INFO] - Stopping the Terraform Reference Engine from processing new requests
+   [...]
+   2023-08-09T10:00:06Z [INFO] - Waiting for any currently running Terraform Reference Engine executions to complete
+   2023-08-09T10:00:07Z [INFO] - Initiating a terminate operation for the following TRE execution instances: ['i-0f12345e0f123aaaa']
+   2023-08-09T10:00:08Z [INFO] - Suspending the following scaling processes for auto scaling group 'TerraformAutoscalingGroup': ['Launch', 'ReplaceUnhealthy']
+   2023-08-09T10:00:08Z [INFO] - Successfully initiated termination for 1 TRE execution instances
+   [...]
+   2023-08-09T10:00:54Z [INFO] - Checking the status of the Terraform Reference Engine in AWS account '123456789012' and region 'us-east-2'
+   2023-08-09T10:00:55Z [INFO] - Terraform Reference Engine Status: 'Disabled'
+   2023-08-09T10:00:55Z [INFO] - The Terraform Reference Engine has been successfully stopped, any new requests will remain in their SQS queues until restarted or they timeout
+   2023-08-09T10:00:55Z [INFO] - Total execution time: 89s
+   ```
+3. Retrieve the current version of the `terraform_runner` Python package:
+   ```shell
+   ❯ export TF_RUNNER_VER=$(head -n 1 ./wrapper-scripts/terraform_runner/__init__.py | awk '{print $3}' | xargs)
+   ```
+4. Deploy or update the Terraform Reference Engine in your AWS environment using the AWS SAM CLI:
+   ```shell
+   ❯ sam deploy \
+       --config-file ./samconfig.toml \
+       --template-file ./.aws-sam/packaged.yaml \
+       --region "${AWS_REGION}" \
+       --s3-bucket "${BOOTSTRAP_BUCKET}" \
+       --parameter-overrides "ParameterKey=TerraformRunnerVersion,ParameterValue=${TF_RUNNER_VER}"
+   
+   Deploying with following values
+   ===============================
+   Stack name                   : SAM-TRE
+   Region                       : us-east-2
+   Confirm changeset            : False
+   Disable rollback             : False
+   Deployment s3 bucket         : terraform-engine-bootstrap-123456789012-us-east-2
+   Capabilities                 : ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
+   Parameter overrides          : {"TerraformRunnerVersion": "1.0.0"}
+   Signing Profiles             : {}
 
-`resource sg-xxxxxxxx has a dependent object (Service: AmazonEC2; Status Code: 400; Error Code: DependencyViolation;`
+   Initiating deployment
+   =====================
+   Waiting for changeset to be created..
+   Changeset created successfully. arn:aws:cloudformation:us-east-2:123456789012:changeSet/samcli-deploy1691606704/be73dd87-2c9a-4bbc-bd3d-756e1bbe83b4
+   2023-08-09 11:45:34 - Waiting for stack create/update to complete
+   [...]
+   Successfully created/updated stack - SAM-TRE in us-east-2
+   ```
+5. If you previously disabled the Terraform Reference Engine in your AWS environment in Step 2 above, you need to 
+   re-enable the processing of TRE provisioning requests by executing the following command:
+   > _This step is not necessary if you are deploying Terraform Reference Engine for the first time in your AWS 
+   > environment._
+   ```shell
+   ❯ ./tools/manage-terraform-engine.py \
+       --region "${AWS_REGION}" \
+       --action start \
+       --auto-approve
+   2023-08-09T11:57:19Z [INFO] - Checking the status of the Terraform Reference Engine in AWS account '123456789012' and region 'us-east-2'
+   2023-08-09T11:57:19Z [INFO] - Terraform Reference Engine Status: 'Disabled'
+   2023-08-09T11:57:19Z [INFO] - Starting Terraform Reference Engine execution instances
+   2023-08-09T11:57:20Z [INFO] - Resuming the following scaling processes for auto scaling group 'TerraformAutoscalingGroup': ['Launch', 'ReplaceUnhealthy']
+   2023-08-09T11:57:20Z [INFO] - Waiting for TRE execution instances to reach one of the following desired states: ['running']
+   2023-08-09T11:59:21Z [INFO] - All TRE execution instances have reached one of the desired states
+   2023-08-09T11:59:38Z [INFO] - Resuming the processing of new requests by the Terraform Reference Engine
+   [...]
+   2023-08-09T12:00:16Z [INFO] - Checking the status of the Terraform Reference Engine in AWS account '123456789012' and region 'us-east-2'
+   2023-08-09T12:00:17Z [INFO] - Terraform Reference Engine Status: 'Enabled'
+   2023-08-09T12:00:17Z [INFO] - The Terraform Reference Engine has been successfully started, any new requests received or requests currently in the TRE SQS queues will be processed
+   2023-08-09T12:00:17Z [INFO] - Total execution time: 180s
+   ```
+</details>
 
-Solution: Terminate your EC2 instances named TerraformExecutionInstance. Then rerun the failed command.
+---
 
-#### NOTE: Consider following the below steps if you are attempting to update an already in-use installation
-1. **Manually disable the SQS triggers for the `TerraformEngineProvisioningHandlerLambda` and `TerraformEngineTerminateHandlerLambda` Lambda functions.** This will allow messages to be sent to the queues by Service Catalog but prevent the EC2 instance(s) from starting new workflows that could be affected by shutting down the EC2 instances in the following steps.
-1. **Navigate to Step Functions console and confirm there are no ongoing workflow executions in the `ManageProvisionedProductStateMachine` and `TerminateProvisionedProductStateMachine` state machines. If there are ongoing executions, wait until they are complete before proceeding to the next step.** Similar to the last step, this will help ensure no ongoing executions are impacted by shutting down the EC2 instances in the following steps.
-1. **Trigger with deployment via the method of your choice (manually or through the deployment script as described above in this README).**
-1. **Monitor the deployment of the SAM-TRE stack in CloudFormation and intermittently refresh until you see an event for an update/delete failure for the security group being modified.** You will see an error message in the event similar to above. This means the deployment is stuck attempting to update the security group and you can proceed to the next step to unblock it.
-1. **Shut down the instances in the ASG for TRE.** This will allow the deployment to update the attached security groups.
-1. **Go back to the deployment of the SAM-TRE stack in CloudFormation and wait for the update/delete retry of the security group to succeed and continue to monitor the rest of the deployment.**
-1. **Ensure the EC2 instances have started back up successfully.** The deployment script should guarantee this step, but it may be necessary to manually start them through the EC2 console.
-1. **Re-enable the SQS triggers for the `TerraformEngineProvisioningHandlerLambda` and `TerraformEngineTerminateHandlerLambda` Lambda functions.** This step will restart processing of any messages that have been waiting in the queue during the update procedure.
+## Troubleshooting Installation Errors
 
-# Create and Provision a Service Catalog Product
+This section addresses some of the common errors that users may encounter during installation or updating of the 
+Terraform Reference Engine in their AWS environments. 
 
-In addition to the steps included in this readme, more information about creating and provisioning a service catalog product can be found here: https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html
+<details>
+   <summary><b>Security Group Replacement</b></summary>
 
+   ### Security Group Replacement
+   > [!NOTE]
+   > _If you use the automated deployment tooling provided by this project ([`deploy-terraform-engine.sh`](./tools/deploy-terraform-engine.sh)),
+   > the resource replacement and dependency violation errors described in this section are automatically handled for you._ 
 
-## Create a Product
+   When a user is updating an existing deployment of the Terraform Reference Engine, replacement of existing resources 
+   such as the security group used by the TRE execution instances _may_ be necessary. However, you cannot delete a 
+   security group that's associated with EC2 instances that are in the `running` or `stopped` state, and 
+   attempts to do so will result in the following error message: 
+   ```shell
+   resource sg-xxxxxxxx has a dependent object (Service: AmazonEC2; Status Code: 400; Error Code: DependencyViolation;
+   ```
 
-1. Create a product in Service Catalog 
-    * Use TERRAFORM_OPEN_SOURCE as the product type. 
-    * Use TERRAFORM_OPEN_SOURCE as the provisioning artifact type.
-    * Use a .tar.gz file containing your Terraform config as the provisioning artifact file.
+   To resolve this error: 
+   1. Terminate all TRE execution instances (i.e., EC2 instances named `TerraformExecutionInstance`) and ensure no new 
+      instances are launched while performing the update. The easiest way to accomplish this is to execute the following 
+      command, replacing `<AWS_REGION>` with the correct region for your AWS environment:
+      ```shell
+      ❯ ./tools/manage-terraform-engine.py \
+          --region <AWS_REGION> \
+          --action stop \
+          --auto-approve
+      ```
+   2. This command will stop the existing Terraform Reference Engine from processing new TRE provisioning requests, 
+      gracefully drain all TRE execution instances, and prevent the auto scaling group from launching new TRE execution 
+      instances until re-enabled.
+   3. Initiate the update of the Terraform Reference Engine.
+   4. Once the update operation has completed successfully, re-enable the Terraform Reference Engine environment by 
+      executing the following command, replacing `<AWS_REGION>` with the correct region for your AWS environment:
+      ```shell
+      ❯ ./tools/manage-terraform-engine.py \
+          --region <AWS_REGION> \
+          --action start \
+          --auto-approve
+      ```
+</details>
 
+---
 
-## Add a Launch Role
+## Create and Provision an AWS Service Catalog Product
+> [!IMPORTANT]
+> _Unless otherwise specified, all commands should be executed from the [Terraform Example](example) directory._
 
-Every terraform-open-source product must have a launch constraint that indicates the IAM role to be used for provisioning the product's resources. This role is known as the "launch role." 
+In addition to the steps outlined below, you can find more information about creating and provisioning Terraform 
+products in AWS Service Catalog from the [Getting Started with Terraform Open Source guide](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html)
+and the [Self-Service Provisioning of Terraform Open-Source Configurations with AWS Service Catalog blog post](https://aws.amazon.com/blogs/aws/new-self-service-provisioning-of-terraform-open-source-configurations-with-aws-service-catalog/).
+ 
+This project includes an example [Terraform module](example/terraform-example-bucket) that you can use to create your 
+first Terraform Service Catalog product. The example product will create an S3 bucket in an end user AWS account that 
+is configured for secure cross-account access by a designated central security operations AWS account. The [Terraform 
+Example Makefile](example/Makefile) contains a number of convenience targets to help you easily deploy or remove the 
+example in your AWS environment.
 
-An example launch role is here: ```cfn-templates/TerraformProvisioningAccount.yaml```
+### Automated Deployment of the Terraform Example Module
 
-The Terraform Reference Engine has the following requirements for the launch role.
-1. Grant sts:AssumeRole permission to some Terraform Reference Engine IAM roles.
-    * The role used for parsing parameters in the provisioning artifact. This role is named ServiceCatalogTerraformOSParameterParserRole-<region>.
-    * The role used for running Terraform commands. the named of this role is TerraformExecutionRole-<region>.
-    * When adding these roles to the IAM policy, use a Condition block with the StringLike operator on aws:PrincipalArn, rather than setting these role arns directly in the Resource block. See the example listed above.
+1. Ensure your local environment passes all prerequisite checks and that you have properly set the environment
+   variables required to deploy the Terraform Example product by executing the following command from within the 
+   [Terraform Example directory (./example)](example):
+   ```shell
+   ❯ make check-prerequisites
+   AWS Account: 123456789012
+   AWS Region: us-east-2
+   Directory Name: example
+   All prerequisites are installed and configured properly.
+   ```
+   > [!IMPORTANT]
+   > _Make sure you are executing in your Service Catalog central hub account and the correct region and that the 
+   > directory name is `example` before continuing._  
 
-In addition, Service Catalog has requirements for each terraform-open-source product's launch role.
-https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-launchrole-Terraform.html
+2. Deploy the Terraform Example product to your Service Catalog central hub account by executing the following command:
+   ```shell
+   ❯ make create-terraform-example
+   Building provisioning artifact and copying to the bootstrap S3 bucket.
+      - Provisioning Artifact: s3://terraform-engine-bootstrap-123456789012-us-east-2/dist/terraform-example-bucket.tar.gz
+   Creating the IAM role in AWS account 123456789012 for the Service Catalog launch constraint.
+      - Launch Role: arn:aws:iam::123456789012:role/SCLaunchRoleTerraformBucketExample
+   Creating the Service Catalog product in AWS account 123456789012.
+      - Service Catalog Product: prod-o6ry72lee5j5y
+   Creating the Service Catalog portfolio in AWS account 123456789012.
+      - Service Catalog Portfolio: port-gyl5agftgwzsk
+   Associating the Service Catalog product with the portfolio in AWS account 123456789012.
+      - Product Association: prod-o6ry72lee5j5y with port-gyl5agftgwzsk
+   Creating launch constraint for the Service Catalog product and portfolio in AWS account 123456789012.
+      - Service Catalog Constraint: cons-ambp22i6kfiik
+   ```
+   The `create-terraform-example` target automatically handles the following steps for you:
+      - Packages the Terraform Example module into a `tar.gz` provisioning artifact and copies it to the TRE bootstrap S3 bucket. 
+      - Creates an IAM role that is properly configured for use as the Terraform Example launch role in your Service Catalog central hub account.
+      - Creates a Service Catalog product and portfolio for the Terraform Example module.
+      - Associates the Service Catalog product with the portfolio and creates the appropriate launch constraint.
 
-1. Grant sts:AssumeRole to the Service Catalog service principal.
-1. Include permissions to manage tagging and resource grouping of the provisioned resources.
-1. Grant s3:GetObject to access the Service Catalog bucket where provisioning artifact files are made available. You can use a Condition block to limit the resource to buckets with the tag key "servicecatalog:provisioning" and value "true." See the above example.
+### Sharing the Terraform Example Portfolio
 
-## Grant Access to the Product
+Once you have successfully deployed the Terraform Example module to your Service Catalog central hub account, you can 
+make the Terraform Example product available to end users by [sharing the Service Catalog portfolio](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/catalogs_portfolios_sharing_how-to-share.html) 
+and [granting access](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/catalogs_portfolios_users.html). 
+The [Terraform Example Makefile](example/Makefile) contains convenience targets to help you easily grant portfolio 
+access to IAM role principals and share the portfolio to AWS Organizations OUs.
 
-1. Put the product in a portfolio and grant access to an IAM user, group, or role. This IAM principal is known as the Service Catalog end user.
-1. Optionally, you can share the portfolio to other accounts.
+In the following steps, we will share the Terraform Example portfolio with all AWS accounts within an AWS Organizations 
+OU and grant access to any user who is authorized to assume the IAM role that corresponds to an IAM Identity Center 
+permission set named `AccountOwners`:
 
-## Provision the Product
+1. To grant access to all users authorized to access the desired permission set role, execute the following 
+   command, replacing the pattern in `SHARED_ROLE_NAME` with the appropriate value for your environment:
+   ```shell
+   ❯ make grant-portfolio-access SHARED_ROLE_NAME="AWSReservedSSO_AccountOwners_*"
+   Granting access to the Service Catalog portfolio in 123456789012 to any IAM roles matching the following pattern: arn:aws:iam:::role/**/AWSReservedSSO_AccountOwners_*
+     - Granted Portfolio Access: arn:aws:iam:::role/**/AWSReservedSSO_AccountOwners_*
+   ```
+2. Repeat Step 1 for any additional IAM principals that should be granted access to the Terraform Example portfolio. 
+3. To share the Service Catalog portfolio to all AWS accounts in an AWS Organizations OU, execute the following command, 
+   replacing the ID in `SHARED_OU_ID` with the appropriate value for your environment:
+   ```shell
+   ❯ make share-portfolio SHARED_OU_ID=ou-olqy-7puk9u2d                          
+   Sharing the Service Catalog portfolio in 123456789012 with the AWS Organizations OU: ou-olqy-7puk9u2d
+     - Portfolio Share: ou-olqy-7puk9u2d
+   ```
+4. Repeat Step 3 for any additional AWS Organizations OUs where the Terraform Example portfolio should be shared.
 
-Now the Service Catalog end user can call these provisioning operations on the product:
+### Launch Role Provisioning 
 
-1. DescribeProvisioningParameters
-1. ProvisionProduct
-1. UpdateProvisionedProduct
-1. TerminateProvisionedProduct
+In order to successfully provision the Terraform Example product, the [launch role](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-launchrole-Terraform.html) 
+must exist in each end user AWS account to which the Terraform Example portfolio is shared. If you followed the steps 
+above, the launch role was automatically created for you in the Service Catalog central hub account. 
 
-The Terraform Reference Engine will perform these operations in the account where the product was created. If the launch role is in a different account, the resources will be provisioned in that account.
+This project includes a [CloudFormation template](example/terraform-example-launch-role.yaml) which you can use with 
+[CloudFormation StackSets](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/what-is-cfnstacksets.html) to 
+provision the Terraform Example launch role. You can also use the convenience targets in the [Terraform Example Makefile](example/Makefile) 
+to deploy the Terraform Example launch role to one or more AWS accounts in which you want to test:
 
-# Architecture Overview
+1. Configure your shell environment with the appropriate AWS credentials for the end user AWS account where you want 
+   to deploy the Terraform Example launch role.
+2. Verify your local environment passes all prerequisite checks and that your AWS region matches the region in which 
+   you deployed the Terraform Reference Engine by executing the following command:
+   ```shell
+   ❯ make check-prerequisites                
+   AWS Account: 987654321012
+   AWS Region: us-east-2
+   Directory Name: example
+   All prerequisites are installed and configured properly.
+   ```
+3. Deploy the launch role to the targeted end user AWS account by executing the following command:
+   ```shell
+   ❯ make create-launch-role                  
+   Creating the IAM role in AWS account 987654321012 for the Service Catalog launch constraint.
+     - Launch Role: arn:aws:iam::987654321012:role/SCLaunchRoleTerraformBucketExample-us-east-2
+   ```
+4. Repeat Steps 1-3 for any other end user AWS accounts where you want to deploy the Terraform Example launch role.
+   
+### Remove the Terraform Example Product
 
-## Purpose
+When you are done testing and wish to remove the Terraform Example product from your AWS environment, you can use 
+the convenience targets in the [Terraform Example Makefile](example/Makefile) to help you easily complete the required 
+tasks.
+
+1. Ensure your local environment passes all prerequisite checks and that you have properly set the environment 
+   variables required to remove the Terraform Example product by executing the following command:
+   ```shell
+   ❯ make check-prerequisites                
+   AWS Account: 123456789012
+   AWS Region: us-east-2
+   Directory Name: example
+   All prerequisites are installed and configured properly.
+   ```
+   > [!IMPORTANT]
+   > _Make sure you are executing in your Service Catalog central hub account and the correct region._ 
+2. Remove the Terraform Example product from your Service Catalog central hub account by executing the following 
+   command:
+   ```shell
+   ❯ make delete-terraform-example                                                        
+   Removing all Service Catalog portfolio shares in AWS account 123456789012.
+     - Removed Portfolio Share: ou-olqy-7puk9u2d
+   Revoking access to the Service Catalog portfolio in 123456789012 for all defined IAM role patterns.
+     - Revoked Portfolio Access: arn:aws:iam:::role/**/AWSReservedSSO_AccountOwners_*
+   Removing the Service Catalog product association with the portfolio in AWS account 123456789012.
+     - Deleted Product Association: prod-it6iylgwgrc72 from port-zsskaaxwu2nfc
+   Deleting the Service Catalog portfolio from AWS account 123456789012.
+     - Deleted Service Catalog Portfolio: port-zsskaaxwu2nfc
+   Deleting the Service Catalog product from AWS account 123456789012.
+     - Deleted Service Catalog Product: prod-it6iylgwgrc72
+   Deleting the IAM role in AWS account 123456789012 used for the Service Catalog launch constraint.
+     - Deleted Launch Role: arn:aws:iam::123456789012:role/SCLaunchRoleTerraformBucketExample-us-east-2
+   ```
+   The `delete-terraform-example` target automatically handles the following steps for you:
+      - Revokes the sharing of the Terraform Example portfolio for all defined AWS Organizations OUs.
+      - Revokes access to the Terraform Example portfolio for all defined IAM principals. 
+      - Disassociates the Terraform Example product from the Terraform Example portfolio and deletes the portfolio.
+      - Deletes the Terraform Example product.
+      - Deletes the IAM role used as the Terraform Example launch role from your Service Catalog central hub account.
+
+   > _If you did not provision the Terraform Example launch role in any additional AWS accounts, you should stop here._
+
+3. Configure your shell environment with the appropriate AWS credentials for one of the end user AWS accounts where you 
+   previously provisioned the Terraform Example launch role.
+4. Delete the launch role from the targeted end user AWS account by executing the following command:
+   ```shell
+   ❯ make delete-launch-role                  
+   Creating the IAM role in AWS account 987654321012 for the Service Catalog launch constraint.
+     - Launch Role: arn:aws:iam::987654321012:role/SCLaunchRoleTerraformBucketExample-us-east-2
+   ```
+5. Repeat Steps 3 & 4 for any other end user AWS accounts where you previously provisioned the Terraform Example 
+   launch role.
+
+---
+
+## Architecture Overview
+
+### Purpose
 
 The Service Catalog Terraform Reference Engine is a project that allows product cataloging and provisioning using Terraform as the choice for infrastructure as code.
 
-## What Is a TERRAFORM_OPEN_SOURCE Product Engine?
+### What Is a TERRAFORM_OPEN_SOURCE Product Engine?
 
 Service Catalog supports a product type called TERRAFORM_OPEN_SOURCE. Customers use this product type to catalog and provision products where the implementation of the product is built by the customer. This product implementation is known as an engine.
-
 
 * When a user creates a new product or provisioning artifact of type TERRAFORM_OPEN_SOURCE, Service Catalog stores the provisioning artifact but does not validate it. 
 * When DescribeProvisioningParameters is called on a TERRAFORM_OPEN_SOURCE product, Service Catalog calls a Lambda function provided by the customer to parse the parameters from the artifact.
@@ -219,13 +493,11 @@ Service Catalog supports a product type called TERRAFORM_OPEN_SOURCE. Customers 
 
 In this reference architecture, we have built a Terraform Open Source product engine for Terraform. The provisioning artifacts will be Terraform configuration files written in Hashicorp Config Language (HCL). The creation and management of resources will be done using Terraform Open Source running on EC2 instances.
 
-## Service Catalog Terraform Open Source Parameter Parser
+### Service Catalog Terraform Open Source Parameter Parser
 
 The Terraform reference engine includes a Lambda function to parse variables in the provisioning artifact and return them to Service Catalog. The function is invoked when the end user calls the Service Catalog DescribeProvisioningParameters API.
 
 The Service Catalog Terraform Open Source Parameter Parser is a Lambda function written in Go. It uses the Hashicorp Config Inspect library to inspect HCL files: https://github.com/hashicorp/terraform-config-inspect
-
-### Usages
 
 #### Artifact Specification
 
@@ -237,7 +509,7 @@ The Service Catalog Terraform Open Source Parameter Parser assumes the provided 
 
 If provided, the launch role arn must be a valid IAM arn that has access to the artifact and is assumable by the parser lambda.
 
-### Override Files
+#### Override Files
 
 The Service Catalog Terraform Open Source Parameter Parser parses files with override.tf suffix as override files
 
@@ -247,13 +519,15 @@ Behavior when multiple override files define the same top-level variable block i
 
 Please also refer to the Override Files section under Limitations in the README below to understand the risks of using override files in Terraform Reference Engine
 
-### Exceptions
+#### Exceptions
 
-The Service Catalog Terraform Open Source Parameter Parser throws two types of exceptions: ParserInvalidParameterException and ParserAccessDeniedException
+The Service Catalog Terraform Open Source Parameter Parser throws two types of exceptions: 
+`ParserInvalidParameterException` and `ParserAccessDeniedException`:
 
-ParserInvalidParameterException is thrown when the provided input is invalid
+- `ParserInvalidParameterException` is thrown when the provided input is invalid.
 
-ParserAccessDeniedException is thrown when the provided launch role cannot be assumed by the parser, or the artifact cannot be accessed with the launch role
+- `ParserAccessDeniedException` is thrown when the provided launch role cannot be assumed by the parser, or the 
+   artifact cannot be accessed with the launch role.
 
 ## Provisioning Workflows
 
@@ -327,22 +601,22 @@ For the terminate workflow, the terraform_runner package performs these steps.
 
 Unit tests are included for each Lambda function as well as for the terraform_runner Python package.
 
-# Attributions
+## Attributions
 
 1. [Terraform](https://github.com/hashicorp/terraform)
 1. [Hashicorp Terraform Config Inspect library](https://github.com/hashicorp/terraform-config-inspect)
 1. [Original 2018 Service Catalog Terraform Reference Architecture](https://github.com/aws-samples/aws-service-catalog-terraform-reference-architecture)
 1. [Python virtual environment](https://docs.python.org/3/library/venv.html)
 
-# Limitations
+## Limitations
 
-## Artifact File Types
+### Artifact File Types
 
 All provisioning artifacts must be in tar.gz format and have a filename extension of .tar.gz. Inside the tar.gz file, the Terraform config files must be in .tf format. The .tf.json format is not supported.
 
 When creating the tar.gz file, be sure that the root-module files are at the root directory of the archive. Some archiving tools default to putting the files into a top-level directory. If that happens, the engine cannot determine the root module from local modules in subdirectories.
 
-## Override Files
+### Override Files
 
 The Terraform Reference Engine adds some override files to each configuration before running Terraform CLI commands. Therefore, if your configuration conflicts with any of the below overrides, the behavior of the CLI commands on that configuration will be undefined. We strongly recommend that you avoid including override files in your provisioning artifact.
 
@@ -365,7 +639,6 @@ Example:
     }
 }
 ```
-
 
 The engine does not include DynamoDB state locking in the backend configuration. This is not needed for two reasons.
 
@@ -426,20 +699,20 @@ If you do include other providers in your Terraform configuration, be sure they 
 
 The tag SERVICE_CATALOG_TERRAFORM_INTEGRATION-DO_NOT_DELETE will be applied to all resources provisioned by the engine. Do not modify this tag. It is required for Service Catalog to maintain a resource group containing the resources for the provisioned product.
 
-## Resource Timeouts
+### Resource Timeouts
 
 Service Catalog will time out your provisioning operation if it runs too long. See the Service Catalog documentation for the maximum duration of a provisioning operation.
 
 If you include resource timeouts in your Terraform configuration, the timeout with the shorter duration will take effect. 
 
-## Parameter Parser
+### Parameter Parser
 
-### Parsing Large Provisioning Artifacts
+#### Parsing Large Provisioning Artifacts
 
 Due to AWS Lambda memory size constraint, large provisioning artifacts compressed using standard .tar.gz algorithm over 500 KB might fail to be parsed.
 
 MemorySize setting for the parameter parser can be adjusted up to 10240 MB by overriding ParameterParserLambdaMemorySize parameter in the template in order to accommodate the need for parsing very large provisioning artifacts.
 
-### Parser Output
+#### Parser Output
 
 Parameter parser parses Terraform variable arguments including name, default, type, description and sensitive. Specifically, validation and nullable fields are not parsed.
