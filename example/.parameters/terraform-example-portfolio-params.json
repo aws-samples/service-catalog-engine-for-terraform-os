@@ -1,0 +1,6 @@
+{
+    "AcceptLanguage": "en",
+    "DisplayName": "Terraform Example - Security Operations Infrastructure",
+    "Description": "AWS resources used by the Security Operations team to manage and monitor accounts across the environment.",
+    "ProviderName": "Amazon"
+}

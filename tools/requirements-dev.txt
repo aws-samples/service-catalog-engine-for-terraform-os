@@ -1,0 +1,7 @@
+-r requirements.txt
+
+mypy-boto3-autoscaling>=1.28.0
+mypy-boto3-ec2>=1.28.3
+mypy-boto3-lambda>=1.28.0
+mypy-boto3-stepfunctions>=1.28.0
+mypy-boto3-sts>=1.28.0

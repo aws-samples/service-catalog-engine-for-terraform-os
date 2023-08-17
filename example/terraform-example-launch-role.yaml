@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >-
+  This template creates an AWS Identity and Access Management (IAM) role that is properly configured 
+  as an AWS Service Catalog launch role for use with the Terraform Reference Engine. The role should  
+  be created in both the AWS Service Catalog hub account and all end user accounts where provisioning 
+  will occur.
+
+Parameters:
+  TerraformEngineAccount:
+    Description: >-
+      (Required) The 12-digit AWS account ID where the Terraform Reference Engine has been deployed.
+    Type: String
+    AllowedPattern: ^[0-9]{12}$
+
+Resources:
+  SCLaunchRoleTerraformBucketExample:
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "This is a Service Catalog launch role and the wildcard resource scope is correct."
+          - id: W28
+            reason: "This is a Service Catalog launch role and the explicit name is expected."
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "SCLaunchRoleTerraformBucketExample-${AWS::Region}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ServiceCatalogAccess
+            Effect: Allow
+            Principal:
+              Service: servicecatalog.amazonaws.com
+            Action:
+              - sts:AssumeRole
+            Condition:
+              ArnLike:
+                aws:SourceArn:
+                  - !Sub "arn:aws:servicecatalog:${AWS::Region}:${AWS::AccountId}:*"
+              StringEquals:
+                aws:SourceAccount:
+                  - !Sub "${AWS::AccountId}"
+          - Sid: TerraformReferenceEngineAccess
+            Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              AWS:
+                - !Sub "arn:${AWS::Partition}:iam::${TerraformEngineAccount}:root"
+            Condition:
+              StringLike:
+                aws:PrincipalArn:
+                  - !Sub "arn:${AWS::Partition}:iam::${TerraformEngineAccount}:role/TerraformEngine/TerraformExecutionRole*"
+                  - !Sub "arn:${AWS::Partition}:iam::${TerraformEngineAccount}:role/TerraformEngine/ServiceCatalogTerraformOSParameterParserRole*"
+      Policies:
+        # This policy grants the permissions required by all launch roles to allow the Terraform
+        # Reference Engine to retrieve artifacts from AWS Service Catalog owned S3 buckets.
+        - PolicyName: ProvisioningArtifactAccessPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    s3:ExistingObjectTag/servicecatalog:provisioning: "true"
+
+        # This policy grants the permissions required by all launch roles to allow AWS Service
+        # Catalog to manage AWS Resource Groups and tags for managed resources.
+        - PolicyName: BaselineResourcePolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - resource-groups:CreateGroup
+                  - resource-groups:DeleteGroup
+                  - resource-groups:Tag
+                  - resource-groups:ListGroupResources
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - tag:GetResources
+                  - tag:GetTagKeys
+                  - tag:GetTagValues
+                  - tag:TagResources
+                  - tag:UntagResources
+                Resource: "*"
+
+        # This policy grants the permissions required for the launch role to create the
+        # underlying resources defined in the Terraform product. This example is for
+        # creating an S3 bucket through a Terraform product.
+        - PolicyName: ResourceCreationPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:CreateBucket*
+                  - s3:DeleteBucket*
+                  - s3:PutBucketAcl
+                  - s3:PutBucketLogging
+                  - s3:PutBucketPolicy
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutBucketTagging
+                  - s3:PutBucketVersioning
+                  - s3:PutEncryptionConfiguration
+                Resource: !Sub "arn:${AWS::Partition}:s3:::*"
+              - Effect: Allow
+                Action:
+                  - s3:GetAccelerateConfiguration
+                  - s3:GetBucket*
+                  - s3:GetEncryptionConfiguration
+                  - s3:GetLifecycleConfiguration
+                  - s3:GetReplicationConfiguration
+                Resource: !Sub "arn:${AWS::Partition}:s3:::*"
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - s3:ListBucket
+                Resource: !Sub "arn:${AWS::Partition}:s3:::*"
+Outputs:
+  LaunchRoleArn:
+    Description: The Amazon Resource Name (ARN) of the AWS Service Catalog launch role.
+    Value: !GetAtt SCLaunchRoleTerraformBucketExample.Arn
+
+  TerraformEngineAccount:
+    Description: >-
+      The 12-digit AWS account ID where the Terraform Reference Engine has been deployed.
+    Value: !Ref TerraformEngineAccount

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "terraform_runner"
+authors = [
+    {name = "Scott Malyszka", email = "smaly@amazon.com"},
+]
+description = "Executes Terraform on the Terraform Reference Engine instances."
+requires-python = ">=3.7"
+keywords = ["Terraform", "AWS Service Catalog", "TRE"]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Information Technology"
+]
+dependencies = [
+    "boto3>=1.28.19",
+    "botocore>=1.31.19"
+]
+dynamic = ["version", "readme"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+version = {attr = "terraform_runner.__version__"}
+
+[project.urls]
+Homepage = "https://github.com/aws-samples/service-catalog-engine-for-terraform-os"
+Documentation = "https://github.com/aws-samples/service-catalog-engine-for-terraform-os/blob/main/wrapper-scripts/Readme.md"
+Repository = "https://github.com/aws-samples/service-catalog-engine-for-terraform-os.git"
