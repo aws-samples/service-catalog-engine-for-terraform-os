@@ -3,12 +3,12 @@
 The Terraform Reference Engine (TRE) project provides a reference solution you can use to deploy a [Terraform open 
 source](https://developer.hashicorp.com/terraform/intro/terraform-editions#terraform-open-source) provisioning engine 
 in your AWS Service Catalog central administration account (e.g., hub account). With the Terraform Reference Engine 
-deployed, you can now use AWS Service Catalog to organize and enable self-service provisioning with governance for 
+deployed, you can use AWS Service Catalog to organize and enable self-service provisioning with governance for 
 your Terraform configurations within AWS at scale.
 
-You only need to deploy the Terraform Reference Engine once, in your AWS Service Catalog hub account, and the setup 
-takes just a few minutes using the [automated deployment tools](tools/deploy-terraform-engine.sh) provided in this 
-project.
+You only need to deploy the Terraform Reference Engine once, in your AWS Service Catalog central hub account, and the 
+setup takes just a few minutes using the [automated deployment tools](tools/deploy-terraform-engine.sh) provided in 
+this project.
 
 For more information about Terraform Open Source and AWS Service Catalog, see the [Getting Started with Terraform Open Source](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html)
 section of the AWS Service Catalog Administrator Guide.
@@ -27,7 +27,7 @@ installed:
 > _You must also ensure your environment is [properly configured with valid AWS credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials)
 > and a region is set for the AWS environment where the Terraform Reference Engine is or will be deployed._
 
-_The tools in this project automatically check for the mandatory prerequisites. You can check that your local  
+_The tools in this project automatically check for the mandatory prerequisites. You can check that your local 
 environment meets all prerequisites at any time by running `make check-prerequisites` from the 
 [project root directory](.):_
 ```shell
@@ -42,8 +42,8 @@ All prerequisites are installed and configured properly.
 
 ## Automated Installation
 
-This project includes [tools](tools) that will help you easily deploy and manage the Terraform Reference Engine (TRE) 
-in your AWS environment:
+This project includes [tools](tools/README.md) that will help you easily deploy and manage the Terraform Reference 
+Engine (TRE) in your AWS environment:
    - 🚀 [**deploy-terraform-engine.sh**](tools/deploy-terraform-engine.sh): enables you to easily deploy the Terraform 
      Reference Engine (TRE) in your AWS environment or safely update a previously deployed TRE environment. 
    - 🔎 [**manage-terraform-engine.py**](tools/manage-terraform-engine.py): enables you to safely and easily manage the 
@@ -62,17 +62,17 @@ following command, replacing `<AWS_REGION>` with the correct region for your AWS
 
 > [!NOTE]
 > _The [**deploy-terraform-engine.sh**](tools/deploy-terraform-engine.sh) tool automatically detects when it is run in
-> an AWS environment with a previously Terraform Reference Engine deployment, and will safely pause the Terraform 
-> Reference Engine before proceeding. See the [tool documentation](tools/README.md) for additional detail._
+> an AWS environment with a previous Terraform Reference Engine deployment, and will safely pause the Terraform 
+> Reference Engine before proceeding. See the [tools documentation](tools/README.md) for additional detail._
 ---
 
 ## Manual Installation
 
-If you prefer to install the Terraform Reference Engine manually, you may perform the following steps. Please note, 
-unless otherwise specified, all commands should be executed from the [project root directory](.).
+If you prefer to install the Terraform Reference Engine manually, you may perform the following steps. Unless otherwise 
+specified, all commands should be executed from the [project root directory](.).
 
 > [!NOTE]
-> _To proceed with the manual installation steps, please ensure your local environment meets [all prerequisite](#installation-prerequisites)
+> _To proceed with these manual installation steps, please ensure your local environment meets [all prerequisite](#installation-prerequisites)
 > requirements._
 
 <details>
@@ -265,15 +265,15 @@ the TRE infrastructure template (.aws-sam/packaged.yaml) built by the `make buil
 
 ## Troubleshooting Installation Errors
 
-This section addresses some of the common errors that users may encounter during installation or updating of the 
-Terraform Reference Engine in their AWS environments. 
+This section addresses some of the common errors that users may encounter when installing or updating the Terraform 
+Reference Engine in their AWS environment. 
 
 <details>
    <summary><b>Security Group Replacement</b></summary>
 
    ### Security Group Replacement
    > [!NOTE]
-   > _If you use the automated deployment tooling provided by this project ([`deploy-terraform-engine.sh`](./tools/deploy-terraform-engine.sh)),
+   > _If you use the [automated deployment tools](tools/deploy-terraform-engine.sh) provided by this project ([`deploy-terraform-engine.sh`](./tools/deploy-terraform-engine.sh)),
    > the resource replacement and dependency violation errors described in this section are automatically handled for you._ 
 
    When a user is updating an existing deployment of the Terraform Reference Engine, replacement of existing resources 
