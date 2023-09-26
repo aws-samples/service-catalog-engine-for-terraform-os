@@ -1,7 +1,13 @@
-# AWS Service Catalog Engine for Terraform open source
+# AWS Service Catalog Engine for Terraform
 
-The AWS Service Catalog Terraform Reference Engine (TRE) provides an example for you to configure and install a Terraform open source engine in your AWS Service Catalog administrator account. With the engine installed into your account, you can use Service Catalog as a single tool to organize, govern, and distribute your Terraform configurations within AWS.
-For more information about Terraform open source and AWS Service Catalog, see [Getting started with Terraform open source.](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html)
+The AWS Service Catalog Terraform Reference Engine (TRE) provides an example for you to configure and install a Terraform engine in your AWS Service Catalog administrator account. With the engine installed into your account, you can use Service Catalog as a single tool to organize, govern, and distribute your Terraform configurations within AWS.
+For more information about Terraform and AWS Service Catalog, see [Getting started with Terraform.](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-Terraform.html)
+
+# Note on migration from `TERRAFORM_OPEN_SOURCE` to `EXTERNAL` product types
+
+AWS Service Catalog is introducing  important changes for supporting Terraform Open Source starting October 20, 2023. Due to changes in the business licensing for Terraform, any references to 'Terraform Open Source' will be changed. Currently, Service Catalog references ‘open-source’ language in various artifacts such as our APIs, console, documentation, and a publicly available reference engine (TRE) that can be accessed through GitHub.
+For more information on what changes you should make, please refer to the [IMPORTANT_UPDATES.md](IMPORTANT_UPDATES.md). You can also find similar information in [our public documentation](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/update_terraform_open_source_to_external.html).
+
 
 # Pre-requisites
 
@@ -67,7 +73,7 @@ The manual instructions assume you are using the default profile to store your A
 
 ### Create a python virtual environment
 1. Create the virtual environment in directory `venv` by running the command `python3 -m venv venv`
-1. Activate the newly created pythong virtual environment `. venv/bin/activate`
+1. Activate the newly created python virtual environment `. venv/bin/activate`
 
 Note: Once done running all python commands call `deactivate` to stop using the virtual environment.
 
@@ -162,14 +168,14 @@ In addition to the steps included in this readme, more information about creatin
 ## Create a Product
 
 1. Create a product in Service Catalog 
-    * Use TERRAFORM_OPEN_SOURCE as the product type. 
-    * Use TERRAFORM_OPEN_SOURCE as the provisioning artifact type.
+    * Use EXTERNAL as the product type. 
+    * Use EXTERNAL as the provisioning artifact type.
     * Use a .tar.gz file containing your Terraform config as the provisioning artifact file.
 
 
 ## Add a Launch Role
 
-Every terraform-open-source product must have a launch constraint that indicates the IAM role to be used for provisioning the product's resources. This role is known as the "launch role." 
+Every product of type TERRAFORM_OPEN_SOURCE or EXTERNAL must have a launch constraint that indicates the IAM role to be used for provisioning the product's resources. This role is known as the "launch role." 
 
 An example launch role is here: ```cfn-templates/TerraformProvisioningAccount.yaml```
 
@@ -179,11 +185,11 @@ The Terraform Reference Engine has the following requirements for the launch rol
     * The role used for running Terraform commands. the named of this role is TerraformExecutionRole-<region>.
     * When adding these roles to the IAM policy, use a Condition block with the StringLike operator on aws:PrincipalArn, rather than setting these role arns directly in the Resource block. See the example listed above.
 
-In addition, Service Catalog has requirements for each terraform-open-source product's launch role.
+In addition, Service Catalog has requirements for each launch role used for products of type TERRAFORM_OPEN_SOURCE or EXTERNAL.
 https://docs.aws.amazon.com/servicecatalog/latest/adminguide/getstarted-launchrole-Terraform.html
 
 1. Grant sts:AssumeRole to the Service Catalog service principal.
-1. Include permissions to manage tagging and resource grouping of the provisioned resources.
+1. Include permissions to manage tagging and resource grouping of provisioned resources.
 1. Grant s3:GetObject to access the Service Catalog bucket where provisioning artifact files are made available. You can use a Condition block to limit the resource to buckets with the tag key "servicecatalog:provisioning" and value "true." See the above example.
 
 ## Grant Access to the Product
@@ -208,22 +214,22 @@ The Terraform Reference Engine will perform these operations in the account wher
 
 The Service Catalog Terraform Reference Engine is a project that allows product cataloging and provisioning using Terraform as the choice for infrastructure as code.
 
-## What Is a TERRAFORM_OPEN_SOURCE Product Engine?
+## What is an External Product Engine?
 
-Service Catalog supports a product type called TERRAFORM_OPEN_SOURCE. Customers use this product type to catalog and provision products where the implementation of the product is built by the customer. This product implementation is known as an engine.
+Service Catalog supports a product type called EXTERNAL. Customers use this product type to catalog and provision products where the implementation of the product is built by the customer. This product implementation is known as an engine.
 
 
-* When a user creates a new product or provisioning artifact of type TERRAFORM_OPEN_SOURCE, Service Catalog stores the provisioning artifact but does not validate it. 
-* When DescribeProvisioningParameters is called on a TERRAFORM_OPEN_SOURCE product, Service Catalog calls a Lambda function provided by the customer to parse the parameters from the artifact.
-* When a user starts a provisioning workflow for a TERRAFORM_OPEN_SOURCE product, Service Catalog publishes a message to an agreed-upon queue. The engine consumes these messages, and for each it provisions, updates, or terminates the resources as described by the provisioning artifact. When the workflow is done, the engine calls back to Service Catalog to report results. 
+* When a user creates a new product or provisioning artifact of type EXTERNAL, Service Catalog stores the provisioning artifact but does not validate it. 
+* When DescribeProvisioningParameters is called on an EXTERNAL product, Service Catalog calls a Lambda function provided by the customer to parse the parameters from the artifact.
+* When a user starts a provisioning workflow for an EXTERNAL product, Service Catalog publishes a message to an agreed-upon queue. The engine consumes these messages, and for each it provisions, updates, or terminates the resources as described by the provisioning artifact. When the workflow is done, the engine calls back to Service Catalog to report results. 
 
-In this reference architecture, we have built a Terraform Open Source product engine for Terraform. The provisioning artifacts will be Terraform configuration files written in Hashicorp Config Language (HCL). The creation and management of resources will be done using Terraform Open Source running on EC2 instances.
+In this reference architecture, we have built an External product engine for Terraform. The provisioning artifacts will be Terraform configuration files written in Hashicorp Config Language (HCL). The creation and management of resources will be done using Terraform running on EC2 instances.
 
-## Service Catalog Terraform Open Source Parameter Parser
+## Service Catalog Terraform Parameter Parser
 
 The Terraform reference engine includes a Lambda function to parse variables in the provisioning artifact and return them to Service Catalog. The function is invoked when the end user calls the Service Catalog DescribeProvisioningParameters API.
 
-The Service Catalog Terraform Open Source Parameter Parser is a Lambda function written in Go. It uses the Hashicorp Config Inspect library to inspect HCL files: https://github.com/hashicorp/terraform-config-inspect
+The Service Catalog Terraform Parameter Parser is a Lambda function written in Go. It uses the Hashicorp Config Inspect library to inspect HCL files: https://github.com/hashicorp/terraform-config-inspect
 
 ### Usages
 
@@ -233,13 +239,13 @@ Only files with .tf filename extension in the zipped .tar.gz provisioning artifa
 
 #### Launch Role
 
-The Service Catalog Terraform Open Source Parameter Parser assumes the provided launch role to download the artifact if a launch role is provided in the payload. If no launch role is provided, parameter parser will use the default lambda execution role ServiceCatalogTerraformOSParameterParserRole credentials to download the artifact.
+The Service Catalog Terraform Parameter Parser assumes the provided launch role to download the artifact if a launch role is provided in the payload. If no launch role is provided, parameter parser will use the default lambda execution role ServiceCatalogTerraformOSParameterParserRole credentials to download the artifact.
 
 If provided, the launch role arn must be a valid IAM arn that has access to the artifact and is assumable by the parser lambda.
 
 ### Override Files
 
-The Service Catalog Terraform Open Source Parameter Parser parses files with override.tf suffix as override files
+The Service Catalog Terraform Parameter Parser parses files with override.tf suffix as override files
 
 Override files are loaded after normal configuration files with the merging behavior for parameters similar to the one described in Terraform documentation https://developer.hashicorp.com/terraform/language/files/override
 
@@ -249,7 +255,7 @@ Please also refer to the Override Files section under Limitations in the README 
 
 ### Exceptions
 
-The Service Catalog Terraform Open Source Parameter Parser throws two types of exceptions: ParserInvalidParameterException and ParserAccessDeniedException
+The Service Catalog Terraform Parameter Parser throws two types of exceptions: ParserInvalidParameterException and ParserAccessDeniedException
 
 ParserInvalidParameterException is thrown when the provided input is invalid
 
