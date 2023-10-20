@@ -739,7 +739,40 @@ Resources:
         - Key: Name
           Value: TerraformEngineSQSEncryptionKey
 
-  # Queue for receiving provisioning messages from Service Catalog
+  # Queue for receiving provisioning messages from Service Catalog for EXTERNAL product type
+  ExternalEngineProvisioningQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: ServiceCatalogExternalProvisionOperationQueue
+      VisibilityTimeout: 180
+      KmsMasterKeyId: !Ref QueueKey
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt TerraformEngineDLQ.Arn
+        maxReceiveCount: 5
+
+  # Queue for receiving update messages from Service Catalog for EXTERNAL product type
+  ExternalEngineUpdateQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: ServiceCatalogExternalUpdateOperationQueue
+      VisibilityTimeout: 180
+      KmsMasterKeyId: !Ref QueueKey
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt TerraformEngineDLQ.Arn
+        maxReceiveCount: 5
+
+  # Queue for receiving terminate messages from Service Catalog for EXTERNAL product type
+  ExternalEngineTerminateQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: ServiceCatalogExternalTerminateOperationQueue
+      VisibilityTimeout: 180
+      KmsMasterKeyId: !Ref QueueKey
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt TerraformEngineDLQ.Arn
+        maxReceiveCount: 5
+
+  # Queue for receiving provisioning messages from Service Catalog for TERRAFORM_OPEN_SOURCE product type
   TerraformEngineProvisioningQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -750,7 +783,7 @@ Resources:
         deadLetterTargetArn: !GetAtt TerraformEngineDLQ.Arn
         maxReceiveCount: 5
 
-  # Queue for receiving update messages from Service Catalog
+  # Queue for receiving update messages from Service Catalog for TERRAFORM_OPEN_SOURCE product type
   TerraformEngineUpdateQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -761,7 +794,7 @@ Resources:
         deadLetterTargetArn: !GetAtt TerraformEngineDLQ.Arn
         maxReceiveCount: 5
 
-  # Queue for receiving terminate messages from Service Catalog
+  # Queue for receiving terminate messages from Service Catalog for TERRAFORM_OPEN_SOURCE product type
   TerraformEngineTerminateQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -785,6 +818,9 @@ Resources:
         - !Ref TerraformEngineProvisioningQueue
         - !Ref TerraformEngineUpdateQueue
         - !Ref TerraformEngineTerminateQueue
+        - !Ref ExternalEngineProvisioningQueue
+        - !Ref ExternalEngineUpdateQueue
+        - !Ref ExternalEngineTerminateQueue
       PolicyDocument:
         Statement:
           - Sid: Enable AWS Service Catalog to send messages to the queue
@@ -796,6 +832,9 @@ Resources:
               - !GetAtt TerraformEngineProvisioningQueue.Arn
               - !GetAtt TerraformEngineUpdateQueue.Arn
               - !GetAtt TerraformEngineTerminateQueue.Arn
+              - !GetAtt ExternalEngineProvisioningQueue.Arn
+              - !GetAtt ExternalEngineUpdateQueue.Arn
+              - !GetAtt ExternalEngineTerminateQueue.Arn
             Principal:
               Service:
                 - servicecatalog.amazonaws.com
@@ -857,6 +896,8 @@ Resources:
                 Resource:
                   - !GetAtt TerraformEngineProvisioningQueue.Arn
                   - !GetAtt TerraformEngineUpdateQueue.Arn
+                  - !GetAtt ExternalEngineProvisioningQueue.Arn
+                  - !GetAtt ExternalEngineUpdateQueue.Arn
         - PolicyName: AllowKmsDecrypt
           PolicyDocument:
             Statement:
@@ -890,6 +931,25 @@ Resources:
       EventSourceArn: !GetAtt TerraformEngineUpdateQueue.Arn
       FunctionName: !GetAtt TerraformEngineProvisioningHandlerLambda.Arn
       FunctionResponseTypes: [ ReportBatchItemFailures ]
+
+  ExternalEngineProvisioningHandlerLambdaEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10
+      Enabled: true
+      EventSourceArn: !GetAtt ExternalEngineProvisioningQueue.Arn
+      FunctionName: !GetAtt TerraformEngineProvisioningHandlerLambda.Arn
+      FunctionResponseTypes: [ ReportBatchItemFailures ]
+
+  ExternalEngineUpdateQueueLambdaEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10
+      Enabled: true
+      EventSourceArn: !GetAtt ExternalEngineUpdateQueue.Arn
+      FunctionName: !GetAtt TerraformEngineProvisioningHandlerLambda.Arn
+      FunctionResponseTypes: [ ReportBatchItemFailures ]
+
 
   TerraformEngineTerminateHandlerLambda:
     Type: AWS::Serverless::Function
@@ -935,6 +995,7 @@ Resources:
                   - sqs:GetQueueAttributes
                 Resource:
                   - !GetAtt TerraformEngineTerminateQueue.Arn
+                  - !GetAtt ExternalEngineTerminateQueue.Arn
         - PolicyName: AllowKmsDecrypt
           PolicyDocument:
             Statement:
@@ -959,6 +1020,16 @@ Resources:
       EventSourceArn: !GetAtt TerraformEngineTerminateQueue.Arn
       FunctionName: !GetAtt TerraformEngineTerminateHandlerLambda.Arn
       FunctionResponseTypes: [ ReportBatchItemFailures ]
+
+  ExternalEngineTerminateHandlerLambdaEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10
+      Enabled: true
+      EventSourceArn: !GetAtt ExternalEngineTerminateQueue.Arn
+      FunctionName: !GetAtt TerraformEngineTerminateHandlerLambda.Arn
+      FunctionResponseTypes: [ ReportBatchItemFailures ]
+
 
   ParameterParser:
     Type: AWS::Serverless::Function
@@ -987,6 +1058,35 @@ Resources:
       Role:
         Fn::GetAtt:
           - ParameterParserRole
+          - Arn
+
+  ExternalParameterParser:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ServiceCatalogExternalParameterParser
+      CodeUri: lambda-functions/terraform_open_source_parameter_parser/
+      Handler: terraform_open_source_parameter_parser
+      VpcConfig:
+        SubnetIds: !If
+          - MoreThan2AZs
+          - - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+            - !Ref PrivateSubnet3
+          - !If
+            - MoreThan1AZ
+            - - !Ref PrivateSubnet1
+              - !Ref PrivateSubnet2
+            - - !Ref PrivateSubnet1
+        SecurityGroupIds:
+          - !GetAtt VPC.DefaultSecurityGroup
+      Runtime: go1.x
+      Architectures:
+        - x86_64
+      MemorySize: !Ref ParameterParserLambdaMemorySize
+      Timeout: 100
+      Role:
+        Fn::GetAtt:
+          - ExternalParameterParserRole
           - Arn
 
   ParameterParserRole:
@@ -1019,6 +1119,36 @@ Resources:
               Service: [ lambda.amazonaws.com ]
         Version: '2012-10-17'
 
+  ExternalParameterParserRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /TerraformEngine/
+      RoleName: !Sub 'ServiceCatalogExternalParameterParserRole-${AWS::Region}'
+      ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action: [ 'sts:AssumeRole' ]
+                Effect: Allow
+                Resource: !Sub "arn:${AWS::Partition}:iam::*:role/*"
+              - Action: [ 's3:GetObject' ]
+                Effect: Allow
+                Resource: !Sub "arn:${AWS::Partition}:s3:::*"
+                Condition:
+                  StringEquals:
+                    "s3:ExistingObjectTag/servicecatalog:provisioning": "true"
+            Version: '2012-10-17'
+          PolicyName: lambdaPermissions
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: [ 'sts:AssumeRole' ]
+            Effect: Allow
+            Principal:
+              Service: [ lambda.amazonaws.com ]
+        Version: '2012-10-17'
+
   ParameterParserPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -1026,6 +1156,13 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: servicecatalog.amazonaws.com
 
+  ExternalParameterParserPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ExternalParameterParser.Arn
+      Action: lambda:InvokeFunction
+      Principal: servicecatalog.amazonaws.com
+  
   ManageProvisionedProductStateMachine:
     Type: AWS::Serverless::StateMachine
     DependsOn: [ManageProvisionedProductStateMachineRole]
