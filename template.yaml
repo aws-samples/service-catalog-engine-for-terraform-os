@@ -1036,7 +1036,7 @@ Resources:
     Properties:
       FunctionName: ServiceCatalogTerraformOSParameterParser
       CodeUri: lambda-functions/terraform_open_source_parameter_parser/
-      Handler: terraform_open_source_parameter_parser
+      Handler: bootstrap
       VpcConfig:
         SubnetIds: !If
           - MoreThan2AZs
@@ -1050,7 +1050,7 @@ Resources:
             - - !Ref PrivateSubnet1
         SecurityGroupIds:
           - !GetAtt VPC.DefaultSecurityGroup
-      Runtime: go1.x
+      Runtime: provided.al2
       Architectures:
         - x86_64
       MemorySize: !Ref ParameterParserLambdaMemorySize
@@ -1059,13 +1059,15 @@ Resources:
         Fn::GetAtt:
           - ParameterParserRole
           - Arn
+    Metadata:
+      BuildMethod: makefile
 
   ExternalParameterParser:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: ServiceCatalogExternalParameterParser
       CodeUri: lambda-functions/terraform_open_source_parameter_parser/
-      Handler: terraform_open_source_parameter_parser
+      Handler: bootstrap
       VpcConfig:
         SubnetIds: !If
           - MoreThan2AZs
@@ -1079,7 +1081,7 @@ Resources:
             - - !Ref PrivateSubnet1
         SecurityGroupIds:
           - !GetAtt VPC.DefaultSecurityGroup
-      Runtime: go1.x
+      Runtime: provided.al2
       Architectures:
         - x86_64
       MemorySize: !Ref ParameterParserLambdaMemorySize
@@ -1088,6 +1090,8 @@ Resources:
         Fn::GetAtt:
           - ExternalParameterParserRole
           - Arn
+    Metadata:
+      BuildMethod: makefile
 
   ParameterParserRole:
     Type: AWS::IAM::Role
