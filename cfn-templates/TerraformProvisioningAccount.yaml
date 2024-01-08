@@ -31,6 +31,7 @@ Resources:
                 "aws:PrincipalArn":
                   - !Sub arn:${AWS::Partition}:iam::${TerraformEngineAccount}:role/TerraformEngine/TerraformExecutionRole*
                   - !Sub arn:${AWS::Partition}:iam::${TerraformEngineAccount}:role/TerraformEngine/ServiceCatalogTerraformOSParameterParserRole*
+                  - !Sub arn:${AWS::Partition}:iam::${TerraformEngineAccount}:role/TerraformEngine/ServiceCatalogExternalParameterParserRole*
       Policies:
         - PolicyName: ProvisioningArtifactAccessPolicy
           PolicyDocument:
