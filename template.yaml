@@ -108,7 +108,7 @@ Parameters:
     MaxValue: 10240
 
   EC2InstanceType:
-    Default: t2.medium
+    Default: t3.medium
     Description: The type of EC2 instance used by the auto scaling group
     Type: String
 
